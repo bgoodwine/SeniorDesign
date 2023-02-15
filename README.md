@@ -6,6 +6,8 @@ Code for Senior Design II
 2. `ssh pi@razorcrest` (typical irishsat pass)
 3. Test scripts in directory `bridget`
 
+[smbus2 documentation](https://pypi.org/project/smbus2/)
+
 ### ESP32
 Upload `main.cpp` with extra line `monitor_speed = 115200` in `platformio.ini` file of the project.
 
