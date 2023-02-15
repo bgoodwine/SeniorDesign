@@ -6,11 +6,50 @@
 const int ledPin = 4;
 
 // Function that executes whenever data is received from master
-void receiveEvent(int howMany) {
-  while (Wire.available()) { // loop through all but the last
-    char c = Wire.read(); // receive byte as a character
-    digitalWrite(ledPin, c);
+void receiveEvent(int bytes_to_read) {
+  //while (Wire.available()) { // loop through all but the last
+  /*char c = 'h';
+  while (c != '\0') {
+    c = Wire.read();
+    Serial.print(c);
   }
+  Serial.println("");*/
+  int num_bytes = 32;
+  Serial.println("Reading...");
+  byte buf[num_bytes];
+  char msg[num_bytes];
+  int msg_len = 0;
+  Wire.readBytes(buf, num_bytes);
+  Serial.print("Bytes received: ");
+  for (int i = 0; i < num_bytes; i++) {
+    char hexCar[2];
+    sprintf(hexCar, "%02X", buf[i]);
+    char c = (char)buf[i];
+    if (c != '0' && i != 0) {
+      msg[i-1] = c;
+      //Serial.print(c);
+      msg_len++;
+    } else {
+      msg[i] = '\0';
+    }
+    Serial.print(hexCar);
+  }
+
+  Serial.println("");
+  Serial.print("String recieved: ");
+  String m = msg;
+  Serial.println(m);
+  /*byte buf[bytes_to_read];
+  Wire.readBytes(buf, bytes_to_read);
+  Serial.print("Received size ");
+  Serial.print(bytes_to_read);
+  Serial.print(": ");
+  String msg = String(buf, BIN);
+  Serial.println(msg);*/
+    //byte data[bytes_to_read] = Wire.read(bytes_to_read); // receive byte as a character
+    //digitalWrite(ledPin, c);
+    //Serial.println(data);
+
 }
 void loop() {
   delay(100);
