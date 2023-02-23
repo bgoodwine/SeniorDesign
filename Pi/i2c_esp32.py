@@ -16,12 +16,13 @@
 import array
 from smbus2 import SMBus
  
-addr = 0x8 # ESP32 address
-offset = 0
-bus = SMBus(1) # indicates /dev/ic2-1
- 
 
 def main():
+    # i2c parameters
+    addr = 0x8 # ESP32 address
+    offset = 0
+    bus = SMBus(1) # 1 = /dev/ic2-1
+
     print ("Enter message to send to ESP32:")
     while True:
         msg = input(">  ")
@@ -32,7 +33,7 @@ def main():
             msg = msg[0:32]
         elif len(msg) < 32:
             while len(msg) < 32:
-                msg = msg + '0'
+                msg = msg + '\n'
         print(f'msg: {msg}')
         print(f'len: {len(msg)}')
         # convert to byte array

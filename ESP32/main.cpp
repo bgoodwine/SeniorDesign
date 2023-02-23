@@ -5,51 +5,93 @@
 // LED on pin 13
 const int ledPin = 4;
 
+void checkin() {
+  Serial.println("Function: general checkin");
+}
+
+void imu_checkin(char *data) {
+  Serial.println("Function: IMU checkin");
+  Serial.print("Data: ");
+  Serial.println(data);
+}
+void transmit_sdr_message(char *message) {
+  Serial.println("Function: send message to SDR");
+  Serial.print("Message: ");
+  Serial.println(message);
+}
+
+void restart_device(int device_id) {
+  Serial.println("Function: restart device");
+  Serial.print("Device ID: ");
+  Serial.println(device_id);
+}
+
 // Function that executes whenever data is received from master
 void receiveEvent(int bytes_to_read) {
-  //while (Wire.available()) { // loop through all but the last
-  /*char c = 'h';
-  while (c != '\0') {
-    c = Wire.read();
-    Serial.print(c);
-  }
-  Serial.println("");*/
   int num_bytes = 32;
-  Serial.println("Reading...");
   byte buf[num_bytes];
-  char msg[num_bytes];
+  char msg_arr[num_bytes];
   int msg_len = 0;
+  
+  Serial.println("Reading...");
   Wire.readBytes(buf, num_bytes);
+  
   Serial.print("Bytes received: ");
   for (int i = 0; i < num_bytes; i++) {
     char hexCar[2];
     sprintf(hexCar, "%02X", buf[i]);
     char c = (char)buf[i];
-    if (c != '0' && i != 0) {
-      msg[i-1] = c;
-      //Serial.print(c);
+    if (c != '\n' && i != 0) {
+      msg_arr[i-1] = c;
       msg_len++;
     } else {
-      msg[i] = '\0';
+      msg_arr[i] = '\0';
     }
     Serial.print(hexCar);
   }
 
   Serial.println("");
   Serial.print("String recieved: ");
-  String m = msg;
-  Serial.println(m);
-  /*byte buf[bytes_to_read];
-  Wire.readBytes(buf, bytes_to_read);
-  Serial.print("Received size ");
-  Serial.print(bytes_to_read);
-  Serial.print(": ");
-  String msg = String(buf, BIN);
-  Serial.println(msg);*/
-    //byte data[bytes_to_read] = Wire.read(bytes_to_read); // receive byte as a character
-    //digitalWrite(ledPin, c);
-    //Serial.println(data);
+  char *msg = msg_arr;
+  Serial.println(msg);
+  const char *delim = ":";
 
+  char *op_str = strtok(msg, delim);
+  int op = atoi(op_str);
+  Serial.print("Opcode: ");
+  Serial.println(op);
+
+  char *data = strtok(NULL, delim);
+
+  switch(op) {
+    case 0: 
+    Serial.println("Calling 0...");
+    checkin();
+    break;
+
+    case 1:
+    Serial.println("Calling 1...");
+    imu_checkin(data);
+    break;
+
+    case 2:
+    Serial.println("Calling 2...");
+    transmit_sdr_message(data);
+    break;
+
+    case 3:
+    {
+      Serial.println("Calling 3...");
+      int device_id = atoi(data);
+      restart_device(device_id);
+      break;
+    }
+
+    default:
+    Serial.println("ERROR: switch default :(");
+    break;
+
+  }
 }
 void loop() {
   delay(100);
