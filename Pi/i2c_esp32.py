@@ -15,6 +15,13 @@
 
 import array
 from smbus2 import SMBus
+
+def send_msg(msg):
+    # TODO
+    # count num bytes in msg to send
+    # send initial message of opcode:num_bytes
+    # send opcode:msg until msg is over
+    pass
  
 
 def main():
@@ -26,11 +33,16 @@ def main():
     print ("Enter message to send to ESP32:")
     while True:
         msg = input(">  ")
+        leftover = None
 
         # normalize msg to 32 bytes
         msg = msg + '\0'
+        opcode = int(msg[0])
+        print(f'Opcode: {opcode}')
         if len(msg) > 32:
+            leftover = msg[32:]
             msg = msg[0:32]
+            print(f'Levtover msg: {leftover}')
         elif len(msg) < 32:
             while len(msg) < 32:
                 msg = msg + '\n'
