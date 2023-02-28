@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+ 
 # SDA1 GPIO2 pin 3
 # SCL1 GPIO3 pin 5
 
