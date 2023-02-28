@@ -9,21 +9,64 @@ void checkin() {
   Serial.println("Function: general checkin");
 }
 
-void imu_checkin(char *data) {
-  Serial.println("Function: IMU checkin");
-  Serial.print("Data: ");
-  Serial.println(data);
-}
-void transmit_sdr_message(char *message) {
-  Serial.println("Function: send message to SDR");
-  Serial.print("Message: ");
-  Serial.println(message);
-}
-
 void restart_device(int device_id) {
   Serial.println("Function: restart device");
   Serial.print("Device ID: ");
   Serial.println(device_id);
+}
+
+void shutdown_device(int device_id) {
+  Serial.println("Function: shutdown device");
+  Serial.print("Device ID: ");
+  Serial.println(device_id);
+}
+
+void misc_msg(int numbytes) {
+  Serial.println("Function: misc. message");
+  Serial.print("Num bytes: ");
+  Serial.println(numbytes);
+  int buflen = 32;
+  byte buf[buflen];
+  char msg_arr[numbytes];
+  int currindex = 0;
+  int msg_len = 0;
+
+  while (numbytes > 0) {
+    Wire.readBytes(buf, buflen);
+    numbytes = numbytes - buflen;
+
+    for (int i = 0; i < buflen; i++) {
+      char hexCar[2];
+      sprintf(hexCar, "%02X", buf[i]);
+      char c = (char)buf[currindex];
+      if (c != '\n') {
+        msg_arr[currindex-1] = c;
+        msg_len++;
+        currindex++;
+        Serial.print("Current index: ");
+        Serial.println(currindex);
+      } 
+      Serial.print(hexCar); 
+    }
+    msg_arr[currindex] = '\0';
+    Serial.println("");
+    Serial.println(msg_arr);
+    Serial.print("Partial string recieved: ");
+    char *msg = msg_arr;
+    Serial.println(msg);
+    Serial.print("Numbytes left: ");
+    Serial.println(numbytes);
+  }
+
+  Serial.println("FINAL MESSAGE:");
+  msg_arr[currindex] = '\0';
+  Serial.println("");
+  Serial.print("String recieved: ");
+  char *msg = msg_arr;
+  Serial.println(msg);
+  Serial.print("Numbytes: ");
+  Serial.println(numbytes);
+  
 }
 
 // Function that executes whenever data is received from master
@@ -69,21 +112,24 @@ void receiveEvent(int bytes_to_read) {
     checkin();
     break;
 
-    case 1:
+    case 1: {
     Serial.println("Calling 1...");
-    imu_checkin(data);
+    int restart_id = atoi(data);
+    restart_device(restart_id);
     break;
+    }
 
-    case 2:
+    case 2: {
     Serial.println("Calling 2...");
-    transmit_sdr_message(data);
+    int shutdown_id = atoi(data);
+    shutdown_device(shutdown_id);
     break;
+    }
 
-    case 3:
-    {
+    case 3: {
       Serial.println("Calling 3...");
-      int device_id = atoi(data);
-      restart_device(device_id);
+      int numbytes = atoi(data);
+      misc_msg(numbytes);
       break;
     }
 
@@ -105,6 +151,7 @@ void setup() {
   // Connect pin 21 on ESP32 to GPIO3 on Pi (SCL)
 
   Wire.begin(addr, 22, 21); // uint8_t addr, int sda, int scl
+  //Wire.begin(addr, 20, 21); // change for ESP32 S3
   // add to platformio.ini:
   // monitor_speed = 115200
   Serial.begin(115200);
