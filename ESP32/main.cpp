@@ -1,3 +1,5 @@
+
+
 // Include the Wire library for I2C
 #include <Wire.h>
 #include "Arduino.h"
@@ -139,22 +141,20 @@ void receiveEvent(int bytes_to_read) {
 
   }
 }
-void loop() {
-  delay(100);
-}
 
 void setup() {
+  Serial.begin(115200);
+  while(!Serial);
   // Join I2C bus as slave with address 8
-  uint8_t addr = 0x08;
-  // slave addr = 0x08
-  // Connect pin 22 on ESP32 to GPIO2 on Pi (SDA)
-  // Connect pin 21 on ESP32 to GPIO3 on Pi (SCL)
+  uint8_t addr = 0x08; // address: 0x08
+  int sda = 48; // connect to Pi GPIO2
+  int scl = 47; // connect to Pi GPIO3
+  
+  //Wire.setSpeed(10);
+  Wire.begin(addr, sda, scl);
 
-  Wire.begin(addr, 22, 21); // uint8_t addr, int sda, int scl
-  //Wire.begin(addr, 20, 21); // change for ESP32 S3
   // add to platformio.ini:
   // monitor_speed = 115200
-  Serial.begin(115200);
   Serial.println("Joined bus...");
   
   // Call receiveEvent when data received                
@@ -164,3 +164,6 @@ void setup() {
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
 }
+void loop() {
+}
+
