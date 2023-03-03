@@ -1,5 +1,5 @@
 #!/usr/bin/env python
- 
+
 # SDA1 GPIO2 pin 3
 # SCL1 GPIO3 pin 5
 
@@ -67,33 +67,9 @@ class ESP32Client:
     def misc_msg(self, msg):
         print(f'Sending misc. message to ESP32: {msg}')
         opcode = '3'
-        self.send_long_msg(msg, opcode)
-    
-    def send_long_msg(self, leftover, opcode):
-        result = []
-
-        # send initial msg telling esp32 how many bytes to recieve
-        numbytes = len(leftover)
-        print(f'Sending message of {numbytes} bytes')
-        msg = opcode + ':' + str(numbytes) + '\0'
-        print(f'Sending initial message: {msg}')
+        msg = '3:' + msg + '\0'
         self.send_msg(msg)
-
-        msg = ''
-        while leftover:
-            if len(leftover) > 32:
-                # grab 32 bytes of the message to send
-                msg = leftover[0:32]
-                leftover = leftover[32:]
-            else:
-                # last message; <= 32 bytes
-                msg = leftover
-                leftover = ''
-
-            print(f'Sending message:  {msg.strip()}')
-            print(f'Leftover message: {leftover.strip()}')
-            self.send_msg(msg)
-
+    
 def main():
     esp = ESP32Client()
     print("Enter command to send to ESP32:")
@@ -102,10 +78,12 @@ def main():
         msg = input(">  ")
         if msg == '0':
             esp.status_report()
-        elif msg == '1':
-            esp.restart_sensor(0)
-        elif msg == '2':
-            esp.shutdown_sensor(0)
+        elif msg.startswith('1'):
+            sensor_id = msg.split(':')[-1]
+            esp.restart_sensor(sensor_id)
+        elif msg.startswith('2'):
+            sensor_id = msg.split(':')[-1]
+            esp.shutdown_sensor(sensor_id)
         else:
             esp.misc_msg(msg)
 
