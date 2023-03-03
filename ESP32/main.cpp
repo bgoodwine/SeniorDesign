@@ -4,6 +4,13 @@
 #include <Wire.h>
 #include "Arduino.h"
 
+#define DEVICE_0 48
+#define DEVICE_1 6
+
+#define CURRENTPIN 5
+
+#define CALIB 2008
+
 void checkin() {
   Serial.println("Function: general checkin");
 }
@@ -12,12 +19,34 @@ void restart_device(int device_id) {
   Serial.println("Function: restart device");
   Serial.print("Device ID: ");
   Serial.println(device_id);
+
+  switch(device_id) {
+    case 0: {
+      digitalWrite(DEVICE_0, LOW);
+      break;
+    }
+    case 1: {
+      digitalWrite(DEVICE_1, LOW);
+      break;
+    }
+  }
 }
 
 void shutdown_device(int device_id) {
   Serial.println("Function: shutdown device");
   Serial.print("Device ID: ");
   Serial.println(device_id);
+  
+  switch(device_id) {
+    case 0: {
+      digitalWrite(DEVICE_0, HIGH);
+      break;
+    }
+    case 1: {
+      digitalWrite(DEVICE_1, HIGH);
+      break;
+    }
+  }
 }
 
 void misc_msg(char *data) {
@@ -116,10 +145,27 @@ void setup() {
   // Call receiveEvent when data received                
   Wire.onReceive(receiveEvent);
   
-  // Setup pin 13 as output and turn LED off
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, LOW);
+  // Setup LEDs to be "on"
+  pinMode(DEVICE_0, OUTPUT);
+  digitalWrite(DEVICE_0, LOW);
+  pinMode(DEVICE_1, OUTPUT);
+  digitalWrite(DEVICE_1, LOW);
+
+  // set up current sensor for analog input
+  pinMode(CURRENTPIN, INPUT);
+
 }
 void loop() {
+  // 0-4095 input
+  // -20-20 A
+  int data = analogRead(CURRENTPIN);
+  data = data - CALIB;
+  double d = 1.0*data;
+  //d = d/2482.0;
+  d = d/9042.0;
+  d = d*20.0;
+  Serial.print(d);
+  Serial.println(" A");
+  delay(50);
 }
 
