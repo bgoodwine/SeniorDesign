@@ -4,9 +4,6 @@
 #include <Wire.h>
 #include "Arduino.h"
 
-// LED on pin 13
-const int ledPin = 4;
-
 void checkin() {
   Serial.println("Function: general checkin");
 }
@@ -23,52 +20,10 @@ void shutdown_device(int device_id) {
   Serial.println(device_id);
 }
 
-void misc_msg(int numbytes) {
+void misc_msg(char *data) {
   Serial.println("Function: misc. message");
-  Serial.print("Num bytes: ");
-  Serial.println(numbytes);
-  int buflen = 32;
-  byte buf[buflen];
-  char msg_arr[numbytes];
-  int currindex = 0;
-  int msg_len = 0;
-
-  while (numbytes > 0) {
-    Wire.readBytes(buf, buflen);
-    numbytes = numbytes - buflen;
-
-    for (int i = 0; i < buflen; i++) {
-      char hexCar[2];
-      sprintf(hexCar, "%02X", buf[i]);
-      char c = (char)buf[currindex];
-      if (c != '\n') {
-        msg_arr[currindex-1] = c;
-        msg_len++;
-        currindex++;
-        Serial.print("Current index: ");
-        Serial.println(currindex);
-      } 
-      Serial.print(hexCar); 
-    }
-    msg_arr[currindex] = '\0';
-    Serial.println("");
-    Serial.println(msg_arr);
-    Serial.print("Partial string recieved: ");
-    char *msg = msg_arr;
-    Serial.println(msg);
-    Serial.print("Numbytes left: ");
-    Serial.println(numbytes);
-  }
-
-  Serial.println("FINAL MESSAGE:");
-  msg_arr[currindex] = '\0';
-  Serial.println("");
-  Serial.print("String recieved: ");
-  char *msg = msg_arr;
-  Serial.println(msg);
-  Serial.print("Numbytes: ");
-  Serial.println(numbytes);
-  
+  Serial.print("Message: ");
+  Serial.println(data);
 }
 
 // Function that executes whenever data is received from master
@@ -130,8 +85,7 @@ void receiveEvent(int bytes_to_read) {
 
     case 3: {
       Serial.println("Calling 3...");
-      int numbytes = atoi(data);
-      misc_msg(numbytes);
+      misc_msg(data);
       break;
     }
 
@@ -144,11 +98,13 @@ void receiveEvent(int bytes_to_read) {
 
 void setup() {
   Serial.begin(115200);
+  delay(500);
   while(!Serial);
+
   // Join I2C bus as slave with address 8
   uint8_t addr = 0x08; // address: 0x08
-  int sda = 48; // connect to Pi GPIO2
-  int scl = 47; // connect to Pi GPIO3
+  int sda = 47; // connect to Pi GPIO2
+  int scl = 21; // connect to Pi GPIO3
   
   //Wire.setSpeed(10);
   Wire.begin(addr, sda, scl);
@@ -161,8 +117,8 @@ void setup() {
   Wire.onReceive(receiveEvent);
   
   // Setup pin 13 as output and turn LED off
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
 }
 void loop() {
 }
