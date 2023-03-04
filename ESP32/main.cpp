@@ -6,15 +6,17 @@
 
 #define DEVICE_0 48
 #define DEVICE_1 6
-
 #define CURRENTPIN 5
-
 #define CALIB 2008
 
+// Request for checkin function
+// Message format: "0:"
 void checkin() {
   Serial.println("Function: general checkin");
 }
 
+// Restart device function (turn power on)
+// Message format: "1:device_id"
 void restart_device(int device_id) {
   Serial.println("Function: restart device");
   Serial.print("Device ID: ");
@@ -32,6 +34,8 @@ void restart_device(int device_id) {
   }
 }
 
+// Shutdown device function (cut power)
+// Message format: "2:device_id"
 void shutdown_device(int device_id) {
   Serial.println("Function: shutdown device");
   Serial.print("Device ID: ");
@@ -49,6 +53,9 @@ void shutdown_device(int device_id) {
   }
 }
 
+// Misc. message function
+// Message format: "3:message_from_pi" 
+// (NOTE: must be <=32B)
 void misc_msg(char *data) {
   Serial.println("Function: misc. message");
   Serial.print("Message: ");
@@ -62,9 +69,11 @@ void receiveEvent(int bytes_to_read) {
   char msg_arr[num_bytes];
   int msg_len = 0;
   
+  // Read in data from Pi
   Serial.println("Reading...");
   Wire.readBytes(buf, num_bytes);
   
+  // Convert from bytes to a string 
   Serial.print("Bytes received: ");
   for (int i = 0; i < num_bytes; i++) {
     char hexCar[2];
@@ -76,22 +85,28 @@ void receiveEvent(int bytes_to_read) {
     } else {
       msg_arr[i] = '\0';
     }
+    // Print each byte recieved as it is converted
     Serial.print(hexCar);
   }
 
+  // Convert char array to char *  
   Serial.println("");
   Serial.print("String recieved: ");
   char *msg = msg_arr;
   Serial.println(msg);
   const char *delim = ":";
 
+  // Parse the opcode from the string
   char *op_str = strtok(msg, delim);
   int op = atoi(op_str);
   Serial.print("Opcode: ");
   Serial.println(op);
 
+  // Parse data after the opcode
   char *data = strtok(NULL, delim);
 
+  // Call the function associated with the opcode 
+  // With appropriate parameters (sent in data)
   switch(op) {
     case 0: 
     Serial.println("Calling 0...");
@@ -126,43 +141,52 @@ void receiveEvent(int bytes_to_read) {
 }
 
 void setup() {
+  // Serial monitor initialization 
   Serial.begin(115200);
   delay(500);
   while(!Serial);
 
-  // Join I2C bus as slave with address 8
+  // Join I2C bus A as slave with address 8
   uint8_t addr = 0x08; // address: 0x08
-  int sda = 47; // connect to Pi GPIO2
-  int scl = 21; // connect to Pi GPIO3
-  
-  //Wire.setSpeed(10);
-  Wire.begin(addr, sda, scl);
+  int sda = 47; // connect SDA to Pi GPIO2
+  int scl = 21; // connect SDA to Pi GPIO3
 
-  // add to platformio.ini:
-  // monitor_speed = 115200
-  Serial.println("Joined bus...");
+  Wire.begin(addr, sda, scl);
+  Serial.println("Joined bus A.");
+
+  // TODO: add second I2C connection here
+  //int imu_sda = 10;
+  //int imu_scl = 11;
+  //TwoWire IMU = TwiWire(0);
+  //IMU.begin(imu_sda, imu_sdl);
   
-  // Call receiveEvent when data received                
+  // Register receiveEvent() as the function to run 
+  // When the S3 is talked to via I2C         
   Wire.onReceive(receiveEvent);
   
-  // Setup LEDs to be "on"
+  // Initialize "devices" (LEDs) for MOSFET control
+  // And turn "on" (LOW = "on")
   pinMode(DEVICE_0, OUTPUT);
   digitalWrite(DEVICE_0, LOW);
   pinMode(DEVICE_1, OUTPUT);
   digitalWrite(DEVICE_1, LOW);
 
-  // set up current sensor for analog input
+  // Initialize current sensor for analog input
   pinMode(CURRENTPIN, INPUT);
 
 }
 void loop() {
-  // 0-4095 input
-  // -20-20 A
+  // TODO: add IMU I2C control capabilities here (?)
+
+  // Read in current sensor analog signal
   int data = analogRead(CURRENTPIN);
+  // Calibrate data (0-4095) so 1/2 of 4095 == ~0A 
   data = data - CALIB;
+  // Convert to double
   double d = 1.0*data;
-  //d = d/2482.0;
-  d = d/9042.0;
+  // Scale to (-1, 1)
+  d = d/4095.0;  //d = d/2482.0;
+  // Scale to (-20A, 20A)
   d = d*20.0;
   Serial.print(d);
   Serial.println(" A");
