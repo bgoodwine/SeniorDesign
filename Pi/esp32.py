@@ -14,6 +14,7 @@
 # ls /dev/*i2c* results in /dev/i2c-1
 
 import array
+import struct
 from smbus2 import SMBus
 
 class ESP32Client:
@@ -48,11 +49,30 @@ class ESP32Client:
         self.bus.write_i2c_block_data(self.addr, self.offset, byte_msg)
         print('Done sending.')
 
+    def read_bytes(self, numbytes):
+        blist = []
+        for i in range(numbytes):
+            b = self.bus.read_byte(self.addr)
+            blist.append(b)
+            print(bytes(b))
+            #print(f'{bytes(b)} -> {b}')
+
+        print(blist)
+        #barray = bytearray(blist)
+        #print(struct.unpack('i', barray))
+
     # request status report from the ESP32
     def status_report(self):
         print(f'Sending request for status report.')
         msg = '0:' + '\0'
         self.send_msg(msg)
+        #self.read_bytes(8)
+
+    def get_current(self):
+        # request current from esp
+        block = self.bus.read_byte_data(self.addr, self.offset, 8)
+        print(block)
+        print(float(block))
 
     def restart_sensor(self, sensor_id):
         print(f'Sending request to restart sensor {sensor_id}')
@@ -84,6 +104,8 @@ def main():
         elif msg.startswith('2'):
             sensor_id = msg.split(':')[-1]
             esp.shutdown_sensor(sensor_id)
+        elif msg.startswith('4'):
+            esp.get_current()
         else:
             esp.misc_msg(msg)
 

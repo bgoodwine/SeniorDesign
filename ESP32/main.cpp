@@ -9,10 +9,58 @@
 #define CURRENTPIN 4
 #define CALIB 2008
 
+union u{
+  double d;
+  char bytes[sizeof(double)];
+};
+
+double readcurrent(int num_readings) {
+  // average 10 current sensor readings
+  double current_sum = 0;
+  for (int i = 0; i < num_readings; i++) {
+    // Read in current sensor analog signal
+    int data = analogRead(CURRENTPIN);
+
+    // data (0, 4095) -> voltage (0, 3.3)
+    double voltage = ((1.0*data)/4095.0)*3.3;
+
+    // voltage (0.62, 1.62) -> current (-20, 20)
+    current_sum = current_sum + (voltage - 1.62)*20;
+  }
+
+  double current = current_sum/num_readings;
+  return current;
+}
+
+void requestEvent() {
+  Serial.println("Function: Request Event.");
+  union u current;
+  current.d = readcurrent(10);
+
+  Serial.print("Responding with current: ");
+  Serial.print(current.d);
+  Serial.print(" A = ");
+  Serial.println(current.bytes);
+  Serial.println("");
+  Wire.write(current.bytes);
+}
 // Request for checkin function
 // Message format: "0:"
 void checkin() {
   Serial.println("Function: general checkin");
+  /*int current = readcurrent(10);
+  Serial.print("\tCurrent: ");
+  Serial.print(current);
+  Serial.println(" A");
+  // write current to pi
+  Serial.print("\t");
+  Serial.println(highByte(current));
+  Serial.print("\t");
+  Serial.println(lowByte(current));
+  Wire.write(highByte(current));
+  Serial.print("\t");
+  Wire.write(highByte(current));
+  Serial.println("\tDone.");*/
 }
 
 // Restart device function (turn power on)
@@ -163,6 +211,7 @@ void setup() {
   // Register receiveEvent() as the function to run 
   // When the S3 is talked to via I2C         
   Wire.onReceive(receiveEvent);
+  Wire.onRequest(requestEvent);
   
   // Initialize "devices" (LEDs) for MOSFET control
   // And turn "on" (LOW = "on")
@@ -175,24 +224,25 @@ void setup() {
   pinMode(CURRENTPIN, INPUT);
 
 }
+
 void loop() {
   // TODO: add IMU I2C control capabilities here (?)
 
   // Read in current sensor analog signal
   int data = analogRead(CURRENTPIN);
-  Serial.print(data);
+  //Serial.print(data);
 
   // data (0, 4095) -> voltage (0, 3.3)
   double voltage = ((1.0*data)/4095.0)*3.3;
-  Serial.print(" = ");
-  Serial.print(voltage);
-  Serial.print("V");
+  //Serial.print(" = ");
+  //Serial.print(voltage);
+  //Serial.print("V");
 
   // voltage (0.62, 1.62) -> current (-20, 20)
   double current = (voltage - 1.62)*20;
-  Serial.print(" = ");
-  Serial.print(current);
-  Serial.println(" A");
+  //Serial.print(" = ");
+  //Serial.print(current);
+  //Serial.println(" A");
   
   delay(100);
 }
