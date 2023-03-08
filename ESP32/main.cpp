@@ -8,6 +8,7 @@
 #define DEVICE_1 6
 #define CURRENTPIN 4
 #define CALIB 2008
+#define MAXINDEX 7
 
 union u{
   double d;
@@ -16,8 +17,8 @@ union u{
 
 union u current_current;
 
+// return average of num_readings current measurements
 double readcurrent(int num_readings) {
-  // average 10 current sensor readings
   double current_sum = 0;
   for (int i = 0; i < num_readings; i++) {
     // Read in current sensor analog signal
@@ -30,6 +31,7 @@ double readcurrent(int num_readings) {
     current_sum = current_sum + (voltage - 1.62)*20;
   }
 
+  // average
   double current = current_sum/num_readings;
   return current;
 }
@@ -37,10 +39,6 @@ double readcurrent(int num_readings) {
 void requestEvent() {
   static int index = 0;
   Serial.println("Function: Request Event.");
-  //union u current;
-  //current.d = readcurrent(10);
-  Serial.print("Size of double: ");
-  Serial.println(sizeof(double));
 
   Serial.print("Responding with current: ");
   Serial.print(current_current.d);
@@ -50,30 +48,17 @@ void requestEvent() {
   Serial.println(current_current.bytes[index], HEX);
   Serial.println("");
 
+  // Write current byte requested from global current measurement
   Wire.write(current_current.bytes[index]);
   index++;
-  if (index > 8) {
+  if (index > MAXINDEX) {
     index = 0;
   }
-  //Wire.write(current.bytes);
 }
 // Request for checkin function
 // Message format: "0:"
 void checkin() {
   Serial.println("Function: general checkin");
-  /*int current = readcurrent(10);
-  Serial.print("\tCurrent: ");
-  Serial.print(current);
-  Serial.println(" A");
-  // write current to pi
-  Serial.print("\t");
-  Serial.println(highByte(current));
-  Serial.print("\t");
-  Serial.println(lowByte(current));
-  Wire.write(highByte(current));
-  Serial.print("\t");
-  Wire.write(highByte(current));
-  Serial.println("\tDone.");*/
 }
 
 // Restart device function (turn power on)
@@ -235,33 +220,36 @@ void setup() {
 
   // Initialize current sensor for analog input
   pinMode(CURRENTPIN, INPUT);
-  current_current.d = 0; // initialize global current measurement
+  // Initialize global current measurement
+  current_current.d = 0; 
 
 }
 
 void loop() {
   // TODO: add IMU I2C control capabilities here (?)
 
-  // Read in current sensor analog signal
+  /*
   int data = analogRead(CURRENTPIN);
-  //Serial.print(data);
+  Serial.print(data);
 
   // data (0, 4095) -> voltage (0, 3.3)
   double voltage = ((1.0*data)/4095.0)*3.3;
-  //Serial.print(" = ");
-  //Serial.print(voltage);
-  //Serial.print("V");
+  Serial.print(" = ");
+  Serial.print(voltage);
+  Serial.print("V");
 
   // voltage (0.62, 1.62) -> current (-20, 20)
   double current = (voltage - 1.62)*20;
-  //Serial.print(" = ");
-  //Serial.print(current);
-  //Serial.println(" A");
-
-  current_current.d = current;
-  Serial.print("Setting current current = ");
+  Serial.print(" = ");
   Serial.print(current);
   Serial.println(" A");
+  */
+
+  // Read in current sensor analog signal
+  current_current.d = readcurrent(10);
+  /*Serial.print("Setting current current = ");
+  Serial.print(current_current.d);
+  Serial.println(" A");*/
   
   delay(1000);
 }

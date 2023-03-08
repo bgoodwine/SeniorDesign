@@ -24,6 +24,7 @@ class ESP32Client:
         self.addr = 0x8 # ESP32 address
         self.offset = 0
         self.bus = SMBus(1) # 1 = /dev/ic2-1
+        self.num_current_bytes = 8 # size of a double
 
     # send one 32B message to Pi
     def send_msg(self, msg):
@@ -50,48 +51,25 @@ class ESP32Client:
         self.bus.write_i2c_block_data(self.addr, self.offset, byte_msg)
         print('Done sending.')
 
-    '''
-    def read_bytes(self, numbytes):
-        blist = []
-        for i in range(numbytes):
-            b = self.bus.read_byte(self.addr)
-            blist.append(b)
-            print(bytes(b))
-            #print(f'{bytes(b)} -> {b}')
-
-        print(blist)
-        #barray = bytearray(blist)
-        #print(struct.unpack('i', barray))
-    '''
-
     # request status report from the ESP32
     def status_report(self):
         print(f'Sending request for status report.')
         msg = '0:' + '\0'
         self.send_msg(msg)
 
+    # request current data from ESP32
     def get_current(self):
         status = bytearray()
-        for i in range(0, 8):
-            #status += chr(self.bus.read_byte(self.addr))
+
+        # read in 8 bytes = sizeof(double)
+        for i in range(0, self.num_current_bytes):
             status.append(self.bus.read_byte(self.addr))
-            print(f'Got char: {hex(status[i])}')
             time.sleep(0.05)
         time.sleep(0.1)
 
-        #current = bytearray()
-        #current.extend(map(ord, status))
         current = struct.unpack('d', status)[0]
-        print('current: ')
         print(current)
         return current
-
-        '''
-        # request current from esp
-        block = self.bus.read_byte_data(self.addr, self.offset, 8)
-        print(block)
-        print(float(block))
-        '''
 
     def restart_sensor(self, sensor_id):
         print(f'Sending request to restart sensor {sensor_id}')
@@ -123,8 +101,9 @@ def main():
         elif msg.startswith('2'):
             sensor_id = msg.split(':')[-1]
             esp.shutdown_sensor(sensor_id)
-        elif msg.startswith('4'):
-            esp.get_current()
+        elif msg.startswith('4') or msg == 'current':
+            current = esp.get_current()
+            print(f'Current: {current}')
         else:
             esp.misc_msg(msg)
 
