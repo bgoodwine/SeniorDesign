@@ -59,9 +59,10 @@ class ESP32Client:
 
     # request current data from ESP32
     def get_current(self):
-        status = bytearray()
+        self.send_msg('5:')
 
         # read in 8 bytes = sizeof(double)
+        status = bytearray()
         for i in range(0, self.num_current_bytes):
             status.append(self.bus.read_byte(self.addr))
             time.sleep(0.05)

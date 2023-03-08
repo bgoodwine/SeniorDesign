@@ -16,6 +16,7 @@ union u{
 };
 
 union u current_current;
+int current_request = 0;
 
 // return average of num_readings current measurements
 double readcurrent(int num_readings) {
@@ -36,9 +37,9 @@ double readcurrent(int num_readings) {
   return current;
 }
 
-void requestEvent() {
+void send_current() {
   static int index = 0;
-  Serial.println("Function: Request Event.");
+  Serial.println("Function: Send Current.");
 
   Serial.print("Responding with current: ");
   Serial.print(current_current.d);
@@ -55,6 +56,23 @@ void requestEvent() {
     index = 0;
   }
 }
+
+void requestEvent() {
+  // Respond as the current request ID dictates 
+  switch (current_request) {
+    case 5: {
+      send_current();
+      break;
+    }
+
+    default: {
+      Serial.print("Current request ID unknown: ");
+      Serial.println(current_request);
+      break;
+    }
+  }
+}
+
 // Request for checkin function
 // Message format: "0:"
 void checkin() {
@@ -176,6 +194,12 @@ void receiveEvent(int bytes_to_read) {
     case 3: {
       Serial.println("Calling 3...");
       misc_msg(data);
+      break;
+    }
+
+    case 5: {
+      Serial.println("Setting current request ID to 5");
+      current_request = 5;
       break;
     }
 
