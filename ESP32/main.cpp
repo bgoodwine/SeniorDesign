@@ -14,6 +14,8 @@ union u{
   char bytes[sizeof(double)];
 };
 
+union u current_current;
+
 double readcurrent(int num_readings) {
   // average 10 current sensor readings
   double current_sum = 0;
@@ -33,16 +35,27 @@ double readcurrent(int num_readings) {
 }
 
 void requestEvent() {
+  static int index = 0;
   Serial.println("Function: Request Event.");
-  union u current;
-  current.d = readcurrent(10);
+  //union u current;
+  //current.d = readcurrent(10);
+  Serial.print("Size of double: ");
+  Serial.println(sizeof(double));
 
   Serial.print("Responding with current: ");
-  Serial.print(current.d);
-  Serial.print(" A = ");
-  Serial.println(current.bytes);
+  Serial.print(current_current.d);
+  Serial.print(" A at index = ");
+  Serial.print(index);
+  Serial.print(" = ");
+  Serial.println(current_current.bytes[index], HEX);
   Serial.println("");
-  Wire.write(current.bytes);
+
+  Wire.write(current_current.bytes[index]);
+  index++;
+  if (index > 8) {
+    index = 0;
+  }
+  //Wire.write(current.bytes);
 }
 // Request for checkin function
 // Message format: "0:"
@@ -222,6 +235,7 @@ void setup() {
 
   // Initialize current sensor for analog input
   pinMode(CURRENTPIN, INPUT);
+  current_current.d = 0; // initialize global current measurement
 
 }
 
@@ -243,7 +257,12 @@ void loop() {
   //Serial.print(" = ");
   //Serial.print(current);
   //Serial.println(" A");
+
+  current_current.d = current;
+  Serial.print("Setting current current = ");
+  Serial.print(current);
+  Serial.println(" A");
   
-  delay(100);
+  delay(1000);
 }
 

@@ -15,6 +15,7 @@
 
 import array
 import struct
+import time
 from smbus2 import SMBus
 
 class ESP32Client:
@@ -29,7 +30,7 @@ class ESP32Client:
         if len(msg) > 32:
             print('ERROR: msg is > 32B, use send_long_msg >:(')
             return
-        
+
         # normalize to 32B
         while len(msg) < 32:
             msg = msg + '\n'
@@ -49,6 +50,7 @@ class ESP32Client:
         self.bus.write_i2c_block_data(self.addr, self.offset, byte_msg)
         print('Done sending.')
 
+    '''
     def read_bytes(self, numbytes):
         blist = []
         for i in range(numbytes):
@@ -60,19 +62,36 @@ class ESP32Client:
         print(blist)
         #barray = bytearray(blist)
         #print(struct.unpack('i', barray))
+    '''
 
     # request status report from the ESP32
     def status_report(self):
         print(f'Sending request for status report.')
         msg = '0:' + '\0'
         self.send_msg(msg)
-        #self.read_bytes(8)
 
     def get_current(self):
+        status = bytearray()
+        for i in range(0, 8):
+            #status += chr(self.bus.read_byte(self.addr))
+            status.append(self.bus.read_byte(self.addr))
+            print(f'Got char: {hex(status[i])}')
+            time.sleep(0.05)
+        time.sleep(0.1)
+
+        #current = bytearray()
+        #current.extend(map(ord, status))
+        current = struct.unpack('d', status)[0]
+        print('current: ')
+        print(current)
+        return current
+
+        '''
         # request current from esp
         block = self.bus.read_byte_data(self.addr, self.offset, 8)
         print(block)
         print(float(block))
+        '''
 
     def restart_sensor(self, sensor_id):
         print(f'Sending request to restart sensor {sensor_id}')
@@ -89,7 +108,7 @@ class ESP32Client:
         opcode = '3'
         msg = '3:' + msg + '\0'
         self.send_msg(msg)
-    
+
 def main():
     esp = ESP32Client()
     print("Enter command to send to ESP32:")
