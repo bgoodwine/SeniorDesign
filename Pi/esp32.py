@@ -31,7 +31,7 @@ class ESP32Client:
         if len(msg) > 32:
             print('ERROR: msg is > 32B, use send_long_msg >:(')
             return
-
+        
         # normalize to 32B
         while len(msg) < 32:
             msg = msg + '\n'
@@ -57,11 +57,29 @@ class ESP32Client:
         msg = '0:' + '\0'
         self.send_msg(msg)
 
+        # TODO: read msg back
+
+    # request message from ESP32 for SDR
+    def get_msg(self):
+        # opcode 4 sets request id, request id 0 is send message
+        self.send_msg('4:2')
+        
+        # read in 8 bytes = sizeof(double) 
+        msg = ''
+        for i in range(0, 23):
+            msg += chr(self.bus.read_byte(self.addr))
+            time.sleep(0.05)
+        time.sleep(0.1)
+
+        print(msg)
+        return msg
+
     # request current data from ESP32
     def get_current(self):
-        self.send_msg('5:')
+        # opcode 4 sets request id, request id 1 is send current
+        self.send_msg('4:1')
 
-        # read in 8 bytes = sizeof(double)
+        # read in 8 bytes = sizeof(double) 
         status = bytearray()
         for i in range(0, self.num_current_bytes):
             status.append(self.bus.read_byte(self.addr))
@@ -87,24 +105,35 @@ class ESP32Client:
         opcode = '3'
         msg = '3:' + msg + '\0'
         self.send_msg(msg)
-
+    
 def main():
     esp = ESP32Client()
     print("Enter command to send to ESP32:")
+    print("Options:")
+    print('\tcurrent   - get current reading from esp32')
+    print('\tsdr       - get fake message from esp32 for sdr')
+    print('\tstatus    - get status report from esp32')
+    print('\ton:id     - power on sensor with id = id')
+    print('\toff:id    - power off sensor with id = id')
+    print('\tany text  - send text as misc. message to esp32')
 
     while True:
         msg = input(">  ")
-        if msg == '0':
+        if msg == 'status':
             esp.status_report()
-        elif msg.startswith('1'):
+        elif msg.startswith('1') or msg.startswith('on'):
             sensor_id = msg.split(':')[-1]
             esp.restart_sensor(sensor_id)
-        elif msg.startswith('2'):
+        elif msg.startswith('2') or msg.startswith('off'):
             sensor_id = msg.split(':')[-1]
             esp.shutdown_sensor(sensor_id)
-        elif msg.startswith('4') or msg == 'current':
+        elif msg.startswith('5') or msg == 'current':
             current = esp.get_current()
             print(f'Current: {current}')
+        elif msg.startswith('6') or msg == 'sdr':
+            msg = esp.get_msg()
+        elif msg == 'bye':
+            break
         else:
             esp.misc_msg(msg)
 

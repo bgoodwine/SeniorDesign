@@ -37,6 +37,22 @@ double readcurrent(int num_readings) {
   return current;
 }
 
+void send_sdr_msg() {
+  static int index = 0;
+  String msg = "Fake message for SDR :)";
+
+  Serial.print("Responding with char at index = ");
+  Serial.print(index);
+  Serial.print(" = ");
+  Serial.println(msg[index]);
+
+  Wire.write(msg[index]);
+  index++;
+  if (index >= msg.length()) {
+    index = 0;
+  }
+}
+
 void send_current() {
   static int index = 0;
   Serial.println("Function: Send Current.");
@@ -60,9 +76,21 @@ void send_current() {
 void requestEvent() {
   // Respond as the current request ID dictates 
   switch (current_request) {
-    case 5: {
+    case 0: {
+      // 0 - request for general checkin
+      //checkin();
+      break;
+    }
+    case 1: {
+      // 1 - send current reading from ESP32 to Pi
       send_current();
       break;
+    }
+    case 2: {
+      // 2 - send message from ESP32 for SDR to Pi
+      send_sdr_msg();
+      break;
+
     }
 
     default: {
@@ -197,9 +225,10 @@ void receiveEvent(int bytes_to_read) {
       break;
     }
 
-    case 5: {
-      Serial.println("Setting current request ID to 5");
-      current_request = 5;
+    case 4: {
+      current_request = atoi(data);
+      Serial.print("Setting current request ID to ");
+      Serial.println(current_request);
       break;
     }
 
@@ -250,31 +279,10 @@ void setup() {
 }
 
 void loop() {
-  // TODO: add IMU I2C control capabilities here (?)
-
-  /*
-  int data = analogRead(CURRENTPIN);
-  Serial.print(data);
-
-  // data (0, 4095) -> voltage (0, 3.3)
-  double voltage = ((1.0*data)/4095.0)*3.3;
-  Serial.print(" = ");
-  Serial.print(voltage);
-  Serial.print("V");
-
-  // voltage (0.62, 1.62) -> current (-20, 20)
-  double current = (voltage - 1.62)*20;
-  Serial.print(" = ");
-  Serial.print(current);
-  Serial.println(" A");
-  */
-
   // Read in current sensor analog signal
   current_current.d = readcurrent(10);
-  /*Serial.print("Setting current current = ");
-  Serial.print(current_current.d);
-  Serial.println(" A");*/
-  
   delay(1000);
+  
+  // TODO: add IMU I2C control capabilities here (?)
 }
 
