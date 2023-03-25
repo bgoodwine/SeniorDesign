@@ -3,12 +3,76 @@
 // Include the Wire library for I2C
 #include <Wire.h>
 #include "Arduino.h"
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
+#include <SPI.h> // needed for BNO055 library
+#include <utility/imumaths.h>
+#include <Math.h>
 
+// state detection definitions 
+#define undeployed 0
+#define tumblingState 1
+#define dayCycle 2
+#define nightCycle 3
+#define lowPower 4
+#define downlink 5
+#define error 6
+#define tumbling 1
+#define notTumbling 0
+
+// i2c definitions 
+#define PI_SDA 47 // Pi Zero SDA = GPIO2
+#define PI_SCL 21 // Pi Zero SCL = GPIO3
+#define ESP_ADDR 0x08 // ESP32 address
+#define MAXINDEX 7
+#define ESP_SDA 38 // ESP controlled I2C bus
+#define ESP_SCL 37 // ESP controlled I2C bus
+
+// device on/off pin definitions 
 #define DEVICE_0 48
 #define DEVICE_1 6
 #define CURRENTPIN 4
-#define CALIB 2008
-#define MAXINDEX 7
+
+//#define batt_in A0
+//#define currSense_in A1
+#define PR_in 15
+#define IMU_in 16
+#define Pi5_in 17
+#define SDR_in 18
+#define dl_in 8
+
+#define PR_en 9
+#define IMU_en 10
+#define Pi5_en 11
+#define SDR_en 12
+
+#define battAnomaly 1
+#define IMUAnomaly 2
+#define SDRAnomaly 3
+#define Pi5Anomaly 4
+#define noAnomaly 0
+
+// Initialize I2C busses & devices 
+TwoWire PiBus = TwoWire(0); // I2C bus for Pi to control
+TwoWire ESPBus = TwoWire(1); // I2C bus for ESP32 to control
+Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &ESPBus);
+
+// Initialize state, anomaly, outputs array
+int currentState;
+int oldCurrentState = undeployed;
+int anomaly = noAnomaly;
+float outputsArray[3] = {0,0,0};
+
+// Initialize tumbling detection variables
+float tumbleTime = 0;
+float tumbleStart = 0;
+float stillStart = 0;
+float stillTime = 0;
+
+// Initialize battery level
+float batteryLevel = 100.0;
+float oldBatteryLevel = 0.0;
+float battThreshold = 10.0;
 
 union u{
   double d;
@@ -17,6 +81,373 @@ union u{
 
 union u current_current;
 int current_request = 0;
+
+void sendReport(int anomaly, float oldBatteryLevel, float batteryLevel) {
+  String message;
+  // need to add support for multiple anomalies
+
+  int battLev = int(floor(batteryLevel));
+//  Serial.print("batteryLevel: ");
+//  Serial.println(batteryLevel);
+//  Serial.print("battLev: ");
+//  Serial.println(battLev);
+  int oldBattLev = int(floor(oldBatteryLevel));
+  
+  if (anomaly == battAnomaly){
+    message = "Anomaly detected: battery";
+    Serial.println(message);
+  }
+  else if (anomaly == IMUAnomaly){
+    message = "Anomaly detected: IMU";
+    Serial.println(message);
+  }
+  else if (anomaly == Pi5Anomaly){
+    message = "Anomaly detected: Pi5V";
+    Serial.println(message);
+  }
+  else if (anomaly == SDRAnomaly){
+    message = "Anomaly detected: SDR";
+    Serial.println(message);
+  }
+
+  if (battLev != oldBattLev){
+    message = "Battery Level: ";
+    Serial.print(message);
+    Serial.println(battLev);
+  }
+//  else if (anomaly == noAnomaly){
+//    message = "No anomaly detected";
+//  }
+
+//  Serial.print("Message for I2C transfer to Pi: ");
+  
+}
+
+void tumblingDetection(float (& outputsArray)[3])
+{
+  //Serial.println("Tumbling detection");
+  // fix this function. Need to pass in tumble time as an input
+  
+  int tumbleState = notTumbling;
+  int tumbleStart = outputsArray[2];
+  int stillStart = outputsArray[3];
+  /* Beginning of Tumbling Detection Function*/
+  sensors_event_t angVelocityData;
+  bno.getEvent(&angVelocityData, Adafruit_BNO055::VECTOR_GYROSCOPE);
+
+  double x = -1000000, y = -1000000 , z = -1000000;
+
+  x = angVelocityData.acceleration.x;
+  y = angVelocityData.acceleration.y;
+  z = angVelocityData.acceleration.z;
+
+    /* Display the floating point data */  
+//  Serial.print("X: ");
+//  Serial.print(x);
+//  Serial.print("\tY: ");
+//  Serial.print(y);
+//  Serial.print("\tZ: ");
+//  Serial.print(z);
+//  Serial.println("");
+//  Serial.print("TumbleTime: ");
+//  Serial.println(tumbleTime);
+//  Serial.print("TumbleStart: ");
+//  Serial.println(tumbleStart);
+
+  if ((abs(x) > 1) || (abs(y) > 1) || (abs(z) > 1)) {
+    
+    stillStart = 0;
+    
+    if ((tumbleState == notTumbling)&&(tumbleStart == 0)){
+      tumbleStart = millis();
+    }
+    else {
+      tumbleTime = millis()-tumbleStart;
+      if (tumbleTime > 3000){
+        tumbleState = tumbling;
+        tumbleTime = 0;
+        tumbleStart = 0;
+      }
+    }
+  }
+  else {
+    if (tumbleState == tumbling) {
+      tumbleStart = 0;
+      
+      if (stillStart == 0){
+        stillStart = millis();
+      }
+      else {
+        stillTime = millis()-stillStart;
+        if (stillTime > 3000){
+          tumbleState = notTumbling;
+          stillTime = 0;
+          stillStart = 0;
+        }
+      }
+    }
+  }
+
+  // problem with tumble state being = 128
+//  Serial.print("State from tumbling detection: ");
+//  Serial.println(tumbleState);
+  
+  tumbleState = float(tumbleState);
+  outputsArray[1] = tumbleState;
+  outputsArray[2] = tumbleStart;
+  outputsArray[3] = stillStart;
+//  Serial.println(outputsArray[1]);
+
+  /* End of Tumbling Detection Function*/
+}
+
+void updateState(int currentState, int oldCurrentState) {
+
+  if (oldCurrentState != currentState){
+    if (currentState == tumblingState){
+      // turn on motor board
+      digitalWrite(Pi5_en, HIGH);
+      Serial.println("Pi: ON");
+  //    digitalWrite(Pi33_en, HIGH);
+      digitalWrite(SDR_en, LOW);
+      Serial.println("SDR: OFF");
+      digitalWrite(PR_en, HIGH);
+      Serial.println("Photoresistor: ON");
+    }
+    else if (currentState == dayCycle){
+      // turn on motor board
+      digitalWrite(PR_en, HIGH);
+      Serial.println("Photoresistor: ON");
+      digitalWrite(Pi5_en, HIGH);
+      Serial.println("Pi: ON");
+  //    digitalWrite(Pi33_en, HIGH);
+      digitalWrite(SDR_en, LOW);
+      Serial.println("SDR: OFF");
+      digitalWrite(IMU_en, HIGH);
+      Serial.println("IMU: ON");
+    }
+    else if (currentState == nightCycle){
+      // turn off motor board
+      digitalWrite(PR_en, HIGH);
+      Serial.println("Photoresistor: ON");
+  //    digitalWrite(Pi33_en, LOW);
+      digitalWrite(Pi5_en, LOW);
+      Serial.println("Pi: OFF");
+      digitalWrite(SDR_en, LOW);
+      Serial.println("SDR: OFF");
+      digitalWrite(IMU_en, LOW);
+      Serial.println("IMU: OFF");
+    }
+    else if (currentState == lowPower){
+      // turn off motor board
+      digitalWrite(PR_en, LOW);
+      Serial.println("Photoresistor: OFF");
+  //    digitalWrite(Pi33_en, LOW);
+      digitalWrite(Pi5_en, LOW);
+      Serial.println("Pi: OFF");
+      digitalWrite(SDR_en, LOW);
+      Serial.println("SDR: OFF");
+      digitalWrite(IMU_en, LOW);
+      Serial.println("IMU: OFF");
+    }
+    else if (currentState == downlink){
+      // turn on motor board
+      digitalWrite(PR_en, HIGH);
+      Serial.println("Photoresistor: ON");
+  //    digitalWrite(Pi33_en, HIGH);
+      digitalWrite(Pi5_en, HIGH);
+      Serial.println("Pi: ON");
+      digitalWrite(SDR_en, HIGH);
+      Serial.println("SDR: ON");
+      digitalWrite(IMU_en, HIGH);
+      Serial.println("IMU: ON"); 
+    }
+    else if (currentState == lowPower){
+      // turn on motor board
+      digitalWrite(PR_en, LOW);
+      Serial.println("Photoresistor: OFF");
+  //    digitalWrite(Pi33_en, HIGH);
+      digitalWrite(Pi5_en, LOW);
+      Serial.println("Pi: OFF");
+      digitalWrite(SDR_en, LOW);
+      Serial.println("SDR: OFF");
+      digitalWrite(IMU_en, LOW);
+      Serial.println("IMU: OFF"); 
+    }
+    else if (currentState == error){
+      Serial.println("State update error");
+    }
+  }
+  
+}
+
+int checkAnomalies(int currentState) {
+  /* Read in all voltages, check if they are
+     in operating range from datasheeet */
+
+  bool IMUon;
+  bool Pion;
+  bool SDRon;
+
+  if ((currentState == dayCycle) || (currentState == downlink) || (currentState == tumblingState)){
+    Pion = true;
+  }
+  else {
+    Pion = false;
+  }
+
+  if ((currentState != lowPower)&&(currentState != nightCycle)){
+    IMUon = true;
+  }
+  else {
+    IMUon = false;
+  }
+
+  if ((currentState == downlink)){
+    SDRon = true;
+  }
+  else {
+    SDRon = false;
+  }
+
+  int battv;
+  int IMUv;
+  int Pi5v;
+  int SDRv;
+
+  //battv = analogRead(batt_in);
+  IMUv = analogRead(IMU_in);
+  Pi5v = digitalRead(Pi5_in);
+  SDRv = digitalRead(SDR_in);
+
+//  Serial.print("SDRv: ");
+//  Serial.println(SDRv);
+
+//  Serial.println("");
+//  Serial.println("Battery voltage");
+//  Serial.println(battv);
+//  Serial.println("IMU voltage");
+//  Serial.println(IMUv);
+//  Serial.println("Pi5 voltage");
+//  Serial.println(Pi5v);
+//  Serial.println("");
+
+  //if (battv < floor(200.0*3)) {
+  //  return battAnomaly;
+  //}
+  if (((IMUv < floor(200.0*2.4))||(IMUv > floor(200.0*3.6)))&&(IMUon)) {
+    return IMUAnomaly;
+  }
+//  else if (((Pi5v < floor(4.75*200.0))||(Pi5v > floor(5.25*200.0)))&&(Pion)) {
+  else if ((Pi5v < 1)&&(Pion)) {
+    return Pi5Anomaly;
+  }
+//  else if (((SDRv < floor(4.75*200.0))||(SDRv > floor(5.25*200.0)))&&(SDRon)) {
+  else if ((SDRv < 1)&&(SDRon)) {
+    return SDRAnomaly;
+  }
+  else {
+    return noAnomaly;
+  }
+  
+}
+
+int dayCycleCheck() {
+  int val;
+  val = analogRead(PR_in);
+//  Serial.print("PR voltage: ");
+//  Serial.println(val);
+
+  if (val > 750){
+    return 1;
+  }
+  else {
+    return 0;
+  }
+}
+
+int checkState(int currentState, int oldCurrentState) {
+  int dayCycleBool;
+  int lowPowerBool;
+  int downlinkBool;
+  int tumblingBool = 0;
+
+  if ((currentState == undeployed)||(currentState == tumbling)){
+    tumblingDetection(outputsArray); //might have to modify this to run in the background
+    tumblingBool = outputsArray[1];
+    tumblingBool = int(tumblingBool);
+  }
+
+  if (currentState == undeployed) {
+    if (!tumblingBool) {
+      currentState = undeployed;
+//      if (currentState != oldCurrentState){
+//        Serial.println("Undeployed state detected");
+//      }
+    }
+    else {
+      currentState = tumblingState;
+      if (currentState != oldCurrentState){
+        Serial.println("Tumbling state detected");
+      }
+    } 
+  }
+  else if (!tumblingBool){
+//    Serial.println("Boolcheck");
+    dayCycleBool = dayCycleCheck();
+    //lowPowerBool = lowPowerCheck();
+    //downlinkBool = downlinkCheck();
+    lowPowerBool = false;    
+    downlinkBool = false;
+
+    if ((dayCycleBool)&&(!downlinkBool)&&(!lowPowerBool)){
+      currentState = dayCycle;
+      if (currentState != oldCurrentState){
+        Serial.println("Day cycle detected");
+      }
+    }
+    else if ((downlinkBool)&&(!lowPowerBool)){
+      currentState = downlink;
+      if (currentState != oldCurrentState){
+        Serial.println("Downlink state detected");
+      }
+    }
+    else if (lowPowerBool){
+      currentState = lowPower;
+      if (currentState != oldCurrentState){
+        Serial.println("Low power detected");
+      }
+    }
+    else if ((!dayCycleBool)&&(!downlinkBool)&&(!lowPowerBool)){
+      currentState = nightCycle;
+      if (currentState != oldCurrentState){
+        Serial.println("Night cycle detected");
+      }
+    }
+    else {
+      currentState = error;
+      if (currentState != oldCurrentState){
+        Serial.println("State error detected");
+      }
+    }
+  }
+  else {
+    currentState = tumblingState;
+    if (currentState != oldCurrentState){
+      Serial.println("Tumbling State detected");
+    }
+  }
+  
+//  Serial.print("Current State: ");
+//  Serial.println(currentState);
+
+  return currentState;
+}
+
+int8_t temperature_read() {
+  int8_t boardTemp = bno.getTemp();
+  return boardTemp;
+}
 
 // return average of num_readings current measurements
 double readcurrent(int num_readings) {
@@ -46,7 +477,7 @@ void send_sdr_msg() {
   Serial.print(" = ");
   Serial.println(msg[index]);
 
-  Wire.write(msg[index]);
+  PiBus.write(msg[index]);
   index++;
   if (index >= msg.length()) {
     index = 0;
@@ -66,7 +497,7 @@ void send_current() {
   Serial.println("");
 
   // Write current byte requested from global current measurement
-  Wire.write(current_current.bytes[index]);
+  PiBus.write(current_current.bytes[index]);
   index++;
   if (index > MAXINDEX) {
     index = 0;
@@ -163,7 +594,7 @@ void receiveEvent(int bytes_to_read) {
   
   // Read in data from Pi
   Serial.println("Reading...");
-  Wire.readBytes(buf, num_bytes);
+  PiBus.readBytes(buf, num_bytes);
   
   // Convert from bytes to a string 
   Serial.print("Bytes received: ");
@@ -246,26 +677,32 @@ void setup() {
   while(!Serial);
 
   // Join I2C bus A as slave with address 8
-  uint8_t addr = 0x08; // address: 0x08
-  int sda = 47; // connect SDA to Pi GPIO2
-  int scl = 21; // connect SDA to Pi GPIO3
-
-  Wire.begin(addr, sda, scl);
-  Serial.println("Joined bus A.");
+  // NOTE: casting resolves overloading ambiguity!
+  //Wire.begin((uint8_t)ESP_ADDR, (int)PI_SDA, (int)PI_SCL);
+  //Serial.println("Joined bus A.");
 
   // TODO: add second I2C connection here
-  //int imu_sda = 10;
-  //int imu_scl = 11;
-  //TwoWire IMU = TwiWire(0);
-  //IMU.begin(imu_sda, imu_sdl);
+  
+  PiBus.begin((uint8_t)ESP_ADDR, (int)PI_SDA, (int)PI_SCL);
+  Serial.println("Joined Pi I2C bus.");
   
   // Register receiveEvent() as the function to run 
   // When the S3 is talked to via I2C         
-  Wire.onReceive(receiveEvent);
-  Wire.onRequest(requestEvent);
-  
-  // Initialize "devices" (LEDs) for MOSFET control
-  // And turn "on" (LOW = "on")
+  PiBus.onReceive(receiveEvent);
+  PiBus.onRequest(requestEvent);
+
+  // Begin IMU I2C connection on ESP controlled bus
+  ESPBus.begin((int)ESP_SDA, (int)ESP_SCL);  
+  if(!bno.begin())
+  {
+    Serial.println("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+  }
+  else {
+    bno.setExtCrystalUse(true);
+    Serial.println("Joined ESP32 I2C bus.");
+  }
+
+  // Initialize "devices" (LEDs) for MOSFET control & turn "on" (LOW)
   pinMode(DEVICE_0, OUTPUT);
   digitalWrite(DEVICE_0, LOW);
   pinMode(DEVICE_1, OUTPUT);
@@ -276,13 +713,48 @@ void setup() {
   // Initialize global current measurement
   current_current.d = 0; 
 
+  // Initialize tumbling detection output pins
+  pinMode(PR_en, OUTPUT);
+  pinMode(IMU_en, OUTPUT);
+  pinMode(Pi5_en, OUTPUT);
+  pinMode(SDR_en, OUTPUT);
+
+  // Initialize tumbling detection input pins
+  pinMode(dl_in, INPUT);
+  pinMode(Pi5_in, INPUT);
+  pinMode(SDR_in, INPUT);
+
+  // Write low all devices except IMU to initialize
+  digitalWrite(PR_en, LOW);
+  Serial.println("Photoresistor: OFF");
+  digitalWrite(IMU_en, HIGH);
+  Serial.println("IMU: ON");
+  digitalWrite(Pi5_en, LOW);
+  Serial.println("Pi: OFF");
+  digitalWrite(SDR_en, LOW);
+  Serial.println("SDR: OFF");
+
+  Serial.println("Anomaly/State Detection System Initialized");
+  Serial.println("Undeployed state detected");
+
 }
 
 void loop() {
   // Read in current sensor analog signal
-  current_current.d = readcurrent(10);
-  delay(1000);
+  /*current_current.d = readcurrent(10);
+  delay(1000);*/
   
   // TODO: add IMU I2C control capabilities here (?)
-}
+  delay(3000);
 
+  //oldBatteryLevel = batteryLevel;
+  
+  currentState = checkState(currentState, oldCurrentState);
+  updateState(currentState, oldCurrentState);
+  anomaly = checkAnomalies(currentState);
+  //batteryLevel = checkBatteryLevel();
+  batteryLevel = -1;
+  sendReport(anomaly, oldBatteryLevel, batteryLevel);
+
+  oldCurrentState = currentState;
+}
