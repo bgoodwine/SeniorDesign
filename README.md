@@ -22,7 +22,8 @@ PiBus: I2C bus controlled by the Pi Zero, connected to ESP32 S3
 ESPBus: I2C bus controlled by the ESP32 S3, connected to IMU
 * `SDA: ESP32 S3 GPIO 38`
 * `SCL: ESP32 S3 GPIO 37`
-This bus will in the future connect to the fuel gauge
+
+Note: ESPBus will eventually connect to the fuel gauge
 
 ### Current Pinout
 ```
