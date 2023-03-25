@@ -8,6 +8,98 @@
 #define DEVICE_1 6
 #define CURRENTPIN 4
 #define CALIB 2008
+#define MAXINDEX 7
+
+union u{
+  double d;
+  char bytes[sizeof(double)];
+};
+
+union u current_current;
+int current_request = 0;
+
+// return average of num_readings current measurements
+double readcurrent(int num_readings) {
+  double current_sum = 0;
+  for (int i = 0; i < num_readings; i++) {
+    // Read in current sensor analog signal
+    int data = analogRead(CURRENTPIN);
+
+    // data (0, 4095) -> voltage (0, 3.3)
+    double voltage = ((1.0*data)/4095.0)*3.3;
+
+    // voltage (0.62, 1.62) -> current (-20, 20)
+    current_sum = current_sum + (voltage - 1.62)*20;
+  }
+
+  // average
+  double current = current_sum/num_readings;
+  return current;
+}
+
+void send_sdr_msg() {
+  static int index = 0;
+  String msg = "Fake message for SDR :)";
+
+  Serial.print("Responding with char at index = ");
+  Serial.print(index);
+  Serial.print(" = ");
+  Serial.println(msg[index]);
+
+  Wire.write(msg[index]);
+  index++;
+  if (index >= msg.length()) {
+    index = 0;
+  }
+}
+
+void send_current() {
+  static int index = 0;
+  Serial.println("Function: Send Current.");
+
+  Serial.print("Responding with current: ");
+  Serial.print(current_current.d);
+  Serial.print(" A at index = ");
+  Serial.print(index);
+  Serial.print(" = ");
+  Serial.println(current_current.bytes[index], HEX);
+  Serial.println("");
+
+  // Write current byte requested from global current measurement
+  Wire.write(current_current.bytes[index]);
+  index++;
+  if (index > MAXINDEX) {
+    index = 0;
+  }
+}
+
+void requestEvent() {
+  // Respond as the current request ID dictates 
+  switch (current_request) {
+    case 0: {
+      // 0 - request for general checkin
+      //checkin();
+      break;
+    }
+    case 1: {
+      // 1 - send current reading from ESP32 to Pi
+      send_current();
+      break;
+    }
+    case 2: {
+      // 2 - send message from ESP32 for SDR to Pi
+      send_sdr_msg();
+      break;
+
+    }
+
+    default: {
+      Serial.print("Current request ID unknown: ");
+      Serial.println(current_request);
+      break;
+    }
+  }
+}
 
 // Request for checkin function
 // Message format: "0:"
@@ -133,6 +225,13 @@ void receiveEvent(int bytes_to_read) {
       break;
     }
 
+    case 4: {
+      current_request = atoi(data);
+      Serial.print("Setting current request ID to ");
+      Serial.println(current_request);
+      break;
+    }
+
     default:
     Serial.println("ERROR: switch default :(");
     break;
@@ -163,6 +262,7 @@ void setup() {
   // Register receiveEvent() as the function to run 
   // When the S3 is talked to via I2C         
   Wire.onReceive(receiveEvent);
+  Wire.onRequest(requestEvent);
   
   // Initialize "devices" (LEDs) for MOSFET control
   // And turn "on" (LOW = "on")
@@ -173,27 +273,16 @@ void setup() {
 
   // Initialize current sensor for analog input
   pinMode(CURRENTPIN, INPUT);
+  // Initialize global current measurement
+  current_current.d = 0; 
 
 }
+
 void loop() {
-  // TODO: add IMU I2C control capabilities here (?)
-
   // Read in current sensor analog signal
-  int data = analogRead(CURRENTPIN);
-  Serial.print(data);
-
-  // data (0, 4095) -> voltage (0, 3.3)
-  double voltage = ((1.0*data)/4095.0)*3.3;
-  Serial.print(" = ");
-  Serial.print(voltage);
-  Serial.print("V");
-
-  // voltage (0.62, 1.62) -> current (-20, 20)
-  double current = (voltage - 1.62)*20;
-  Serial.print(" = ");
-  Serial.print(current);
-  Serial.println(" A");
+  current_current.d = readcurrent(10);
+  delay(1000);
   
-  delay(100);
+  // TODO: add IMU I2C control capabilities here (?)
 }
 
