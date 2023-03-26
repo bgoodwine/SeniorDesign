@@ -2,6 +2,7 @@
 
 TwoWire ESPBus = TwoWire(1); // I2C bus for ESP32 to control
 Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &ESPBus);
+Adafruit_MAX17048 maxlipo = Adafruit_MAX17048();
 
 // Initialize state, anomaly, outputs array
 int currentState;
@@ -20,7 +21,7 @@ float batteryLevel = 100.0;
 float oldBatteryLevel = 0.0;
 float battThreshold = 10.0;
 
-void sendReport(int anomaly, float oldBatteryLevel, float batteryLevel) {
+String sendReport(int anomaly, float oldBatteryLevel, float batteryLevel) {
   String message;
   // need to add support for multiple anomalies
 
@@ -56,8 +57,8 @@ void sendReport(int anomaly, float oldBatteryLevel, float batteryLevel) {
 //  else if (anomaly == noAnomaly){
 //    message = "No anomaly detected";
 //  }
-  Serial.print("Message for I2C transfer to Pi: ");
-  Serial.println(message);
+
+  return message;
   
 }
 
@@ -253,7 +254,7 @@ int checkAnomalies(int currentState) {
   int SDRv;
 
   //battv = analogRead(batt_in);
-  IMUv = analogRead(IMU_in);
+  IMUv = analogRead(IMU_in)/4095*3.3;
   Pi5v = digitalRead(Pi5_in);
   SDRv = digitalRead(SDR_in);
 
@@ -272,7 +273,15 @@ int checkAnomalies(int currentState) {
   //if (battv < floor(200.0*3)) {
   //  return battAnomaly;
   //}
-  if (((IMUv < floor(200.0*2.4))||(IMUv > floor(200.0*3.6)))&&(IMUon)) {
+  /*if (((IMUv < floor(200.0*2.4))||(IMUv > floor(200.0*3.6)))&&(IMUon)) {
+    return IMUAnomaly;
+  }*/
+
+  // TODO: convert the rest of the voltage readings to volts and fix checks!
+  if (((IMUv < 0)||(IMUv > 3.3))&&(IMUon)) {
+    Serial.print("IMU: ");
+    Serial.print(IMUv);
+    Serial.println("V.");
     return IMUAnomaly;
   }
 //  else if (((Pi5v < floor(4.75*200.0))||(Pi5v > floor(5.25*200.0)))&&(Pion)) {

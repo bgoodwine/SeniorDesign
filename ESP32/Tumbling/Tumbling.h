@@ -5,7 +5,11 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
- #include <stdint.h>
+#include "Adafruit_MAX1704X.h"
+#include <SPI.h> // needed for BNO055 library
+#include <stdint.h> // needed for int8_t datatype 
+#include <utility/imumaths.h>
+#include <Math.h>
 
 // state detection definitions 
 #define undeployed 0
@@ -40,6 +44,7 @@
 
 extern TwoWire ESPBus;
 extern Adafruit_BNO055 bno;
+extern Adafruit_MAX17048 maxlipo;
 
 // Tumbling external global state variables
 extern int currentState;
@@ -57,7 +62,7 @@ extern float battThreshold;
 
 // Function declarations
 int8_t temperature_read();
-void sendReport(int anomaly, float oldBatteryLevel, float batteryLevel);
+String sendReport(int anomaly, float oldBatteryLevel, float batteryLevel);
 void tumblingDetection(float (& outputsArray)[3]);
 void updateState(int currentState, int oldCurrentState);
 int checkAnomalies(int currentState);
