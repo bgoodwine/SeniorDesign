@@ -11,7 +11,7 @@ The Pi code uses [smbus2](https://pypi.org/project/smbus2/).
 ### Setup the ESP32-S3
 1. Make a new project with platformio on vscode and select `dev board ESP32-S3-DevKitC-1` ([instructions](https://hutscape.com/tutorials/blinky-platformio-esp32s3))
 2. Replace default files with `main.cpp` and `platform.ini` in the `ESP32` directory
-3. Go to the Libraries tab and add `Adafruit_Sensor` and `Adafruit_BNO055` to the project ([instructions](https://docs.platformio.org/en/latest/librarymanager/dependencies.html))
+3. Go to the Libraries tab and add `Adafruit_Sensor` and `Adafruit_BNO055` and the MAX17048 library to the project ([instructions](https://docs.platformio.org/en/latest/librarymanager/dependencies.html))
 4. Plug your computer in to the S3 via the USB port & hit upload 
 
 ### I2C Busses
