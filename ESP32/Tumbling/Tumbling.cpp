@@ -247,8 +247,8 @@ int checkAnomalies(int currentState) {
 
   // Read in all voltage power supplies
   float IMUv = (float)analogRead(IMU_in)/4095*3.3;
-  float Pi5v = (float)analogRead(Pi5_in)/4095*3.3;
-  float SDRv = (float)analogRead(SDR_in)/4095*3.3;
+  float Pi5v = (float)analogRead(Pi5_in)/4095*3.3*2;
+  float SDRv = (float)analogRead(SDR_in)/4095*3.3*4;
   Serial.print("IMUv: ");
   Serial.println(IMUv);
   Serial.print("PI5V: ");
@@ -259,21 +259,16 @@ int checkAnomalies(int currentState) {
   // Check voltages are within acceptable ranges 
   if (((IMUv < 0)||(IMUv > 3.3))&&(IMUon)) {
     // IMU acceptable supply voltage min = 2.4V, max = 3.6V
-    Serial.print("IMU: ");
-    Serial.print(IMUv);
-    Serial.println("V.");
     return IMUAnomaly;
   }
-  else if ((Pi5v < 3)&&(Pion)) {
+  else if ((Pi5v < 4.75 || Pi5v > 5.25)&&(Pion)) {
     // Pi acceptable voltage min = 4.75V, max = 5.25V
-    // ESP32-S3 takes input voltages between 0-3.3V
-    // So check is if the gate of MOSFET powering it is on
+    digitalWrite(Pi5_en, LOW);
+    Serial.println("Pi: OFF");
     return Pi5Anomaly;
   }
-  else if ((SDRv < 1)&&(SDRon)) {
-    // TODO: figure this
-    // SDR acceptable voltage min = ?, max = ?
-    // Current check is if gate is on
+  else if ((SDRv < 6 || SDRv > 17)&&(SDRon)) {
+    // SDR acceptable voltage min = 6V, max = 17V
     return SDRAnomaly;
   }
   else {

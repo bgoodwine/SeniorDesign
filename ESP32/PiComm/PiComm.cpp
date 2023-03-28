@@ -131,23 +131,23 @@ void restart_device(int device_id) {
       break;
     }
     case 2: {
-      digitalWrite(DEVICE_0, HIGH);
+      digitalWrite(PR_en, HIGH);
       Serial.println("Turning photoresistor H");
 
       break;
     }
     case 3: {
-      digitalWrite(DEVICE_0, HIGH);
+      digitalWrite(IMU_en, HIGH);
       Serial.println("Turning IMU H");
       break;
     }
     case 4: {
-      digitalWrite(DEVICE_0, HIGH);
+      digitalWrite(Pi5_en, HIGH);
       Serial.println("Turning Pi 5 H");
       break;
     }
     case 5: {
-      digitalWrite(DEVICE_0, HIGH);
+      digitalWrite(SDR_en, HIGH);
       Serial.println("Turning SDR H");
       break;
     }
@@ -171,22 +171,22 @@ void shutdown_device(int device_id) {
       break;
     }
     case 2: {
-      digitalWrite(DEVICE_0, LOW);
+      digitalWrite(PR_en, LOW);
       Serial.println("Turning photoresistor L");
       break;
     }
     case 3: {
-      digitalWrite(DEVICE_0, LOW);
+      digitalWrite(IMU_en, LOW);
       Serial.println("Turning IMU L");
       break;
     }
     case 4: {
-      digitalWrite(DEVICE_0, LOW);
+      digitalWrite(Pi5_en, LOW);
       Serial.println("Turning Pi 5 L");
       break;
     }
     case 5: {
-      digitalWrite(DEVICE_0, LOW);
+      digitalWrite(SDR_en, LOW);
       Serial.println("Turning SDR L");
       break;
     }

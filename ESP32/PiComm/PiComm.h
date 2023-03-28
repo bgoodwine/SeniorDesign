@@ -13,10 +13,10 @@
 #define ESP_SCL 37 // ESP controlled I2C bus
 
 // from Tumbling
-/*#define PR_en 14
-#define IMU_en 9
-#define Pi5_en 10
-#define SDR_en 11*/
+#define PR_en 9
+#define IMU_en 10
+#define Pi5_en 11
+#define SDR_en 12
 
 
 // device on/off pin definitions 

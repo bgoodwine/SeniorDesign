@@ -60,14 +60,14 @@ void setup() {
   }
 
   // Initialize BNO055 (IMU)
-  /*
+  
   if(!bno.begin()) {
     Serial.println("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
   }
   else {
     bno.setExtCrystalUse(true);
     Serial.println("Found BNO55.");
-  }*/
+  }
 
   // Initialize "devices" (LEDs) for MOSFET control & turn "on" (LOW)
   pinMode(DEVICE_0, OUTPUT);
@@ -90,9 +90,9 @@ void setup() {
   Serial.println("Photoresistor: OFF");
   digitalWrite(IMU_en, HIGH);
   Serial.println("IMU: ON");
-  digitalWrite(Pi5_en, LOW);
+  digitalWrite(Pi5_en, HIGH);
   Serial.println("Pi: OFF");
-  digitalWrite(SDR_en, LOW);
+  digitalWrite(SDR_en, HIGH);
   Serial.println("SDR: OFF");
   
   // Initialize tumbling detection input pins
