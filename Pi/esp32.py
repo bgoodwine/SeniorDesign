@@ -58,7 +58,7 @@ class ESP32Client:
         self.send_msg(msg)
 
         # TODO: read msg back
-        msg = ' '
+        msg = chr(self.bus.read_byte(self.addr))
         while msg[-1] != '\0':
             msg += chr(self.bus.read_byte(self.addr))
             time.sleep(0.05)

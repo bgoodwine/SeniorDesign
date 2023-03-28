@@ -35,7 +35,7 @@ void send_sdr_msg() {
 
   PiBus.write(msg[index]);
   index++;
-  if (index >= msg.length()) {
+  if (index >= msg.length() + 1) {
     index = 0;
   }
 }
@@ -50,6 +50,8 @@ void checkin() {
 
   Serial.print("Responding with message: ");
   Serial.print(current_report);
+  Serial.print("Of length: ");
+  Serial.println(current_report.length())
   Serial.print(" A at index = ");
   Serial.print(index);
   Serial.print(" = ");

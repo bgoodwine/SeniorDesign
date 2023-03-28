@@ -289,7 +289,7 @@ int dayCycleCheck() {
   Serial.print("PR voltage: ");
   Serial.println(val);
 
-  if (val > 2210){
+  if (val > 2190){
     return 1;
   }
   else {
