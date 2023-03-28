@@ -22,10 +22,10 @@
 #define tumbling 1
 #define notTumbling 0
 
-#define PR_in 15
-#define IMU_in 16
-#define Pi5_in 17
-#define SDR_in 18
+#define PR_in 16
+#define IMU_in 17
+#define Pi5_in 15
+#define SDR_in 7
 #define dl_in 8
 
 #define PR_en 9

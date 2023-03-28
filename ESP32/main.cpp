@@ -49,7 +49,7 @@ void setup() {
   ESPBus.begin((int)ESP_SDA, (int)ESP_SCL);  
 
   // Initialize MAX1704X (fuel gauge)
-  if(!maxlipo.begin(&ESPBus)) {
+  /*if(!maxlipo.begin(&ESPBus)) {
     Serial.println("Oops, no MAX17048 detected...");
   } else {
     Serial.print(F("Found MAX17048"));
@@ -64,7 +64,7 @@ void setup() {
   else {
     bno.setExtCrystalUse(true);
     Serial.println("Found BNO55.");
-  }
+  }*/
 
   // Initialize "devices" (LEDs) for MOSFET control & turn "on" (LOW)
   pinMode(DEVICE_0, OUTPUT);
@@ -100,6 +100,24 @@ void setup() {
   Serial.println("Device Control System Initialized.");
   Serial.println("Anomaly/State Detection System Initialized.");
   Serial.println("Undeployed state detected...");
+  
+  while(true) 
+  {
+    Serial.println("Stalling...");
+    float PRv = (float)analogRead(PR_in)/4095*3.3;
+    float IMUv = (float)analogRead(IMU_in)/4095*3.3;
+    float Pi5v = (float)analogRead(Pi5_in)/4095*3.3;
+    float SDRv = (float)analogRead(SDR_in)/4095*3.3;
+    Serial.print("PRv: ");
+    Serial.println(PRv);
+    Serial.print("IMUv: ");
+    Serial.println(IMUv);
+    Serial.print("PI5V: ");
+    Serial.println(Pi5v);
+    Serial.print("SDRv: ");
+    Serial.println(SDRv);
+    delay(1000);
+  }
 }
 
 void loop() {
