@@ -58,6 +58,13 @@ class ESP32Client:
         self.send_msg(msg)
 
         # TODO: read msg back
+        msg = ' '
+        while msg[-1] != '\0':
+            msg += chr(self.bus.read_byte(self.addr))
+            time.sleep(0.05)
+        time.sleep(0.1)
+
+        print(msg)
 
     # request message from ESP32 for SDR
     def get_msg(self):

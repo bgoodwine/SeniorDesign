@@ -2,6 +2,7 @@
   
 int current_request = 0;
 u current_current = {0};
+String current_report = "";
 TwoWire PiBus = TwoWire(0);
 
 // return average of num_readings current measurements
@@ -39,6 +40,32 @@ void send_sdr_msg() {
   }
 }
 
+// Request for checkin function
+// Message format: "0:"
+void checkin() {
+  static int index = 0;
+  Serial.println("Function: general checkin");
+  Serial.print("Message for Pi: ");
+  Serial.println(current_report);
+
+  Serial.print("Responding with message: ");
+  Serial.print(current_report);
+  Serial.print(" A at index = ");
+  Serial.print(index);
+  Serial.print(" = ");
+  Serial.print(current_report[index]);
+  Serial.print(" = ");
+  Serial.println(current_report[index], HEX);
+  Serial.println("");
+
+  // Write current byte requested from global current measurement
+  PiBus.write(current_report[index]);
+  index++;
+  if (index > current_report.length() + 1) {
+    index = 0;
+  }
+}
+
 void send_current() {
   static int index = 0;
   Serial.println("Function: Send Current.");
@@ -64,7 +91,7 @@ void requestEvent() {
   switch (current_request) {
     case 0: {
       // 0 - request for general checkin
-      //checkin();
+      checkin();
       break;
     }
     case 1: {
@@ -87,12 +114,6 @@ void requestEvent() {
   }
 }
 
-// Request for checkin function
-// Message format: "0:"
-void checkin() {
-  Serial.println("Function: general checkin");
-}
-
 // Restart device function (turn power on)
 // Message format: "1:device_id"
 void restart_device(int device_id) {
@@ -107,6 +128,27 @@ void restart_device(int device_id) {
     }
     case 1: {
       digitalWrite(DEVICE_1, LOW);
+      break;
+    }
+    case 2: {
+      digitalWrite(DEVICE_0, HIGH);
+      Serial.println("Turning photoresistor H");
+
+      break;
+    }
+    case 3: {
+      digitalWrite(DEVICE_0, HIGH);
+      Serial.println("Turning IMU H");
+      break;
+    }
+    case 4: {
+      digitalWrite(DEVICE_0, HIGH);
+      Serial.println("Turning Pi 5 H");
+      break;
+    }
+    case 5: {
+      digitalWrite(DEVICE_0, HIGH);
+      Serial.println("Turning SDR H");
       break;
     }
   }
@@ -126,6 +168,26 @@ void shutdown_device(int device_id) {
     }
     case 1: {
       digitalWrite(DEVICE_1, HIGH);
+      break;
+    }
+    case 2: {
+      digitalWrite(DEVICE_0, LOW);
+      Serial.println("Turning photoresistor L");
+      break;
+    }
+    case 3: {
+      digitalWrite(DEVICE_0, LOW);
+      Serial.println("Turning IMU L");
+      break;
+    }
+    case 4: {
+      digitalWrite(DEVICE_0, LOW);
+      Serial.println("Turning Pi 5 L");
+      break;
+    }
+    case 5: {
+      digitalWrite(DEVICE_0, LOW);
+      Serial.println("Turning SDR L");
       break;
     }
   }

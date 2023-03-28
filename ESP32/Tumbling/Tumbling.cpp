@@ -22,7 +22,7 @@ float oldBatteryLevel = 0.0;
 float battThreshold = 10.0;
 
 String sendReport(int anomaly, float oldBatteryLevel, float batteryLevel) {
-  String message;
+  String message = "No anomaly detected";
   // need to add support for multiple anomalies
 
   int battLev = int(floor(batteryLevel));
@@ -34,29 +34,24 @@ String sendReport(int anomaly, float oldBatteryLevel, float batteryLevel) {
   
   if (anomaly == battAnomaly){
     message = "Anomaly detected: battery";
-    Serial.println(message);
   }
   else if (anomaly == IMUAnomaly){
     message = "Anomaly detected: IMU";
-    Serial.println(message);
   }
   else if (anomaly == Pi5Anomaly){
     message = "Anomaly detected: Pi5V";
-    Serial.println(message);
   }
   else if (anomaly == SDRAnomaly){
     message = "Anomaly detected: SDR";
-    Serial.println(message);
   }
 
   if (battLev != oldBattLev){
-    message = "Battery Level: ";
-    Serial.print(message);
-    Serial.println(battLev);
+    message = message + " & Battery Level: ";
+    message = message + String(battLev);
   }
-//  else if (anomaly == noAnomaly){
-//    message = "No anomaly detected";
-//  }
+  //else if (anomaly == noAnomaly){
+    //message = "No anomaly detected";
+  //}
 
   return message;
   
@@ -248,48 +243,37 @@ int checkAnomalies(int currentState) {
     SDRon = false;
   }
 
-  int battv;
-  int IMUv;
-  int Pi5v;
-  int SDRv;
+  // TODO: add battv = analogRead(batt_in)???
 
-  //battv = analogRead(batt_in);
-  IMUv = analogRead(IMU_in)/4095*3.3;
-  Pi5v = digitalRead(Pi5_in);
-  SDRv = digitalRead(SDR_in);
+  // Read in all voltage power supplies
+  float IMUv = (float)analogRead(IMU_in)/4095*3.3;
+  float Pi5v = (float)analogRead(Pi5_in)/4095*3.3;
+  float SDRv = (float)analogRead(SDR_in)/4095*3.3;
+  Serial.print("IMUv: ");
+  Serial.println(IMUv);
+  Serial.print("PI5V: ");
+  Serial.println(Pi5v);
+  Serial.print("SDRv: ");
+  Serial.println(SDRv);
 
-//  Serial.print("SDRv: ");
-//  Serial.println(SDRv);
-
-//  Serial.println("");
-//  Serial.println("Battery voltage");
-//  Serial.println(battv);
-//  Serial.println("IMU voltage");
-//  Serial.println(IMUv);
-//  Serial.println("Pi5 voltage");
-//  Serial.println(Pi5v);
-//  Serial.println("");
-
-  //if (battv < floor(200.0*3)) {
-  //  return battAnomaly;
-  //}
-  /*if (((IMUv < floor(200.0*2.4))||(IMUv > floor(200.0*3.6)))&&(IMUon)) {
-    return IMUAnomaly;
-  }*/
-
-  // TODO: convert the rest of the voltage readings to volts and fix checks!
+  // Check voltages are within acceptable ranges 
   if (((IMUv < 0)||(IMUv > 3.3))&&(IMUon)) {
+    // IMU acceptable supply voltage min = 2.4V, max = 3.6V
     Serial.print("IMU: ");
     Serial.print(IMUv);
     Serial.println("V.");
     return IMUAnomaly;
   }
-//  else if (((Pi5v < floor(4.75*200.0))||(Pi5v > floor(5.25*200.0)))&&(Pion)) {
-  else if ((Pi5v < 1)&&(Pion)) {
+  else if ((Pi5v < 3)&&(Pion)) {
+    // Pi acceptable voltage min = 4.75V, max = 5.25V
+    // ESP32-S3 takes input voltages between 0-3.3V
+    // So check is if the gate of MOSFET powering it is on
     return Pi5Anomaly;
   }
-//  else if (((SDRv < floor(4.75*200.0))||(SDRv > floor(5.25*200.0)))&&(SDRon)) {
   else if ((SDRv < 1)&&(SDRon)) {
+    // TODO: figure this
+    // SDR acceptable voltage min = ?, max = ?
+    // Current check is if gate is on
     return SDRAnomaly;
   }
   else {
@@ -301,9 +285,10 @@ int checkAnomalies(int currentState) {
 int dayCycleCheck() {
   int val;
   val = analogRead(PR_in);
-//  Serial.print("PR voltage: ");
-//  Serial.println(val);
+  Serial.print("PR voltage: ");
+  Serial.println(val);
 
+  // TODO: when "dark" return 0 when "light" return 1
   if (val > 750){
     return 1;
   }

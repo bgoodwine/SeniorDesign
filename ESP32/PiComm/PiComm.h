@@ -12,6 +12,13 @@
 #define ESP_SDA 38 // ESP controlled I2C bus
 #define ESP_SCL 37 // ESP controlled I2C bus
 
+// from Tumbling
+/*#define PR_en 14
+#define IMU_en 9
+#define Pi5_en 10
+#define SDR_en 11*/
+
+
 // device on/off pin definitions 
 #define DEVICE_0 48
 #define DEVICE_1 6
@@ -23,6 +30,7 @@ typedef union u{
   double d;
   char bytes[sizeof(double)];
 }u;
+
 
 extern u current_current;
 extern int current_request;
