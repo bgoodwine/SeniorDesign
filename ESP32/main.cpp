@@ -90,9 +90,9 @@ void setup() {
   Serial.println("Photoresistor: OFF");
   digitalWrite(IMU_en, HIGH);
   Serial.println("IMU: ON");
-  digitalWrite(Pi5_en, HIGH);
+  digitalWrite(Pi5_en, LOW);
   Serial.println("Pi: OFF");
-  digitalWrite(SDR_en, HIGH);
+  digitalWrite(SDR_en, LOW);
   Serial.println("SDR: OFF");
   
   // Initialize tumbling detection input pins
@@ -103,6 +103,7 @@ void setup() {
   Serial.println("Device Control System Initialized.");
   Serial.println("Anomaly/State Detection System Initialized.");
   Serial.println("Undeployed state detected...");
+
 }
 
 void loop() {

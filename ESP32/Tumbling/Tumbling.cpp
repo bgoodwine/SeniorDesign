@@ -138,6 +138,7 @@ void updateState(int currentState, int oldCurrentState) {
 
   if (oldCurrentState != currentState){
     if (currentState == tumblingState){
+      Serial.println("STATE: Tumbling");
       // turn on motor board
       digitalWrite(Pi5_en, HIGH);
       Serial.println("Pi: ON");
@@ -148,6 +149,7 @@ void updateState(int currentState, int oldCurrentState) {
       Serial.println("Photoresistor: ON");
     }
     else if (currentState == dayCycle){
+      Serial.println("STATE: Day Cycle");
       // turn on motor board
       digitalWrite(PR_en, HIGH);
       Serial.println("Photoresistor: ON");
@@ -161,6 +163,7 @@ void updateState(int currentState, int oldCurrentState) {
     }
     else if (currentState == nightCycle){
       // turn off motor board
+      Serial.println("STATE: Night Cycle");
       digitalWrite(PR_en, HIGH);
       Serial.println("Photoresistor: ON");
   //    digitalWrite(Pi33_en, LOW);
@@ -172,6 +175,7 @@ void updateState(int currentState, int oldCurrentState) {
       Serial.println("IMU: OFF");
     }
     else if (currentState == lowPower){
+      Serial.println("STATE: Low Power");
       // turn off motor board
       digitalWrite(PR_en, LOW);
       Serial.println("Photoresistor: OFF");
@@ -184,6 +188,7 @@ void updateState(int currentState, int oldCurrentState) {
       Serial.println("IMU: OFF");
     }
     else if (currentState == downlink){
+      Serial.println("STATE: Downlink");
       // turn on motor board
       digitalWrite(PR_en, HIGH);
       Serial.println("Photoresistor: ON");
@@ -196,6 +201,7 @@ void updateState(int currentState, int oldCurrentState) {
       Serial.println("IMU: ON"); 
     }
     else if (currentState == lowPower){
+      Serial.println("STATE: Low Power");
       // turn on motor board
       digitalWrite(PR_en, LOW);
       Serial.println("Photoresistor: OFF");
@@ -263,8 +269,8 @@ int checkAnomalies(int currentState) {
   }
   else if ((Pi5v < 4.75 || Pi5v > 5.25)&&(Pion)) {
     // Pi acceptable voltage min = 4.75V, max = 5.25V
-    digitalWrite(Pi5_en, LOW);
-    Serial.println("Pi: OFF");
+    /*digitalWrite(Pi5_en, LOW);
+    Serial.println("Pi: OFF");*/
     return Pi5Anomaly;
   }
   else if ((SDRv < 6 || SDRv > 17)&&(SDRon)) {
@@ -283,8 +289,7 @@ int dayCycleCheck() {
   Serial.print("PR voltage: ");
   Serial.println(val);
 
-  // TODO: when "dark" return 0 when "light" return 1
-  if (val > 750){
+  if (val > 2210){
     return 1;
   }
   else {
@@ -302,6 +307,8 @@ int checkState(int currentState, int oldCurrentState) {
     tumblingDetection(outputsArray); //might have to modify this to run in the background
     tumblingBool = outputsArray[1];
     tumblingBool = int(tumblingBool);
+    Serial.print("Tumbling Bool: ");
+    Serial.println(tumblingBool);
   }
 
   if (currentState == undeployed) {
