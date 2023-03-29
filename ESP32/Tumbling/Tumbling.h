@@ -67,7 +67,8 @@ void tumblingDetection(float (& outputsArray)[3]);
 void updateState(int currentState, int oldCurrentState);
 int checkAnomalies(int currentState);
 int dayCycleCheck();
-int checkState(int currentState, int oldCurrentState);
+int downlinkCheck();
+int checkState(int currentState, int oldCurrentState, float batteryLevel);
 int8_t temperature_read();
 
 #endif

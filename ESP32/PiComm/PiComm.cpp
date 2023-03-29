@@ -25,7 +25,7 @@ double readcurrent(int num_readings) {
 }
 
 void send_sdr_msg() {
-  static int index = 0;
+  static int index = 20;
   String msg = "Fake message for SDR :)";
 
   Serial.print("Responding with char at index = ");
@@ -35,7 +35,7 @@ void send_sdr_msg() {
 
   PiBus.write(msg[index]);
   index++;
-  if (index >= msg.length() + 1) {
+  if (index > msg.length()) {
     index = 0;
   }
 }
@@ -51,7 +51,7 @@ void checkin() {
   Serial.print("Responding with message: ");
   Serial.print(current_report);
   Serial.print("Of length: ");
-  Serial.println(current_report.length())
+  Serial.println(current_report.length());
   Serial.print(" A at index = ");
   Serial.print(index);
   Serial.print(" = ");
@@ -63,7 +63,7 @@ void checkin() {
   // Write current byte requested from global current measurement
   PiBus.write(current_report[index]);
   index++;
-  if (index > current_report.length() + 1) {
+  if (index > current_report.length()) {
     index = 0;
   }
 }

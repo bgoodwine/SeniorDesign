@@ -75,17 +75,19 @@ void tumblingDetection(float (& outputsArray)[3]) {
   z = angVelocityData.acceleration.z;
 
     /* Display the floating point data */  
-//  Serial.print("X: ");
-//  Serial.print(x);
-//  Serial.print("\tY: ");
-//  Serial.print(y);
-//  Serial.print("\tZ: ");
-//  Serial.print(z);
-//  Serial.println("");
-//  Serial.print("TumbleTime: ");
-//  Serial.println(tumbleTime);
-//  Serial.print("TumbleStart: ");
-//  Serial.println(tumbleStart);
+    /*
+  Serial.print("X: ");
+  Serial.print(x);
+  Serial.print("\tY: ");
+  Serial.print(y);
+  Serial.print("\tZ: ");
+  Serial.print(z);
+  Serial.println("");
+  Serial.print("TumbleTime: ");
+  Serial.println(tumbleTime);
+  Serial.print("TumbleStart: ");
+  Serial.println(tumbleStart);
+  */
 
   if ((abs(x) > 1) || (abs(y) > 1) || (abs(z) > 1)) {
     
@@ -252,9 +254,11 @@ int checkAnomalies(int currentState) {
   // TODO: add battv = analogRead(batt_in)???
 
   // Read in all voltage power supplies
-  float IMUv = (float)analogRead(IMU_in)/4095*3.3;
-  float Pi5v = (float)analogRead(Pi5_in)/4095*3.3*2;
-  float SDRv = (float)analogRead(SDR_in)/4095*3.3*4;
+  // TODO: ignore the lower two bits? 
+  // TODO: exponential moving ave -> x*current + (1-x)*prev_sum
+  float IMUv = (float)analogRead(IMU_in)/4095*5.4*2 - 1.25;
+  float Pi5v = (float)analogRead(Pi5_in)/4095*4.2*2 - 0.5;
+  float SDRv = (float)analogRead(SDR_in)/4095*3.9*4 - 1;
   Serial.print("IMUv: ");
   Serial.println(IMUv);
   Serial.print("PI5V: ");
@@ -263,11 +267,11 @@ int checkAnomalies(int currentState) {
   Serial.println(SDRv);
 
   // Check voltages are within acceptable ranges 
-  if (((IMUv < 0)||(IMUv > 3.3))&&(IMUon)) {
+  if (((IMUv < 1.5 || IMUv > 4.3))&&(IMUon)) {
     // IMU acceptable supply voltage min = 2.4V, max = 3.6V
     return IMUAnomaly;
   }
-  else if ((Pi5v < 4.75 || Pi5v > 5.25)&&(Pion)) {
+  else if ((Pi5v < 4 || Pi5v > 6)&&(Pion)) {
     // Pi acceptable voltage min = 4.75V, max = 5.25V
     /*digitalWrite(Pi5_en, LOW);
     Serial.println("Pi: OFF");*/
@@ -289,7 +293,7 @@ int dayCycleCheck() {
   Serial.print("PR voltage: ");
   Serial.println(val);
 
-  if (val > 2190){
+  if (val > 1800){
     return 1;
   }
   else {
@@ -297,21 +301,23 @@ int dayCycleCheck() {
   }
 }
 
-int checkState(int currentState, int oldCurrentState) {
+int checkState(int currentState, int oldCurrentState, float batteryLevel) {
   int dayCycleBool;
   int lowPowerBool;
   int downlinkBool;
   int tumblingBool = 0;
-
+   
   if ((currentState == undeployed)||(currentState == tumbling)){
-    tumblingDetection(outputsArray); //might have to modify this to run in the background
-    tumblingBool = outputsArray[1];
-    tumblingBool = int(tumblingBool);
-    Serial.print("Tumbling Bool: ");
+    //tumblingDetection(outputsArray); //might have to modify this to run in the background
+    //tumblingBool = outputsArray[1];
+    //tumblingBool = int(tumblingBool);
+    //Serial.print("Tumbling Bool: ");
+    Serial.print("IMU Bricked... entering day cycle ");
     Serial.println(tumblingBool);
   }
 
   if (currentState == undeployed) {
+    int tumblingBool = 1;
     if (!tumblingBool) {
       currentState = undeployed;
 //      if (currentState != oldCurrentState){
@@ -323,15 +329,22 @@ int checkState(int currentState, int oldCurrentState) {
       if (currentState != oldCurrentState){
         Serial.println("Tumbling state detected");
       }
+      tumblingBool = 0;
     } 
   }
   else if (!tumblingBool){
 //    Serial.println("Boolcheck");
     dayCycleBool = dayCycleCheck();
-    //lowPowerBool = lowPowerCheck();
-    //downlinkBool = downlinkCheck();
-    lowPowerBool = false;    
-    downlinkBool = false;
+    if (batteryLevel < 20.0) {
+        lowPowerBool = true;
+    }
+    else {
+        lowPowerBool = false;
+    }
+
+    downlinkBool = downlinkCheck();
+    // lowPowerBool = false;    
+    // downlinkBool = false;
 
     if ((dayCycleBool)&&(!downlinkBool)&&(!lowPowerBool)){
       currentState = dayCycle;
@@ -380,4 +393,16 @@ int checkState(int currentState, int oldCurrentState) {
 int8_t temperature_read() {
   int8_t boardTemp = bno.getTemp();
   return boardTemp;
+}
+
+int downlinkCheck(){
+
+  int val;
+  val = digitalRead(dl_in);
+  if (val) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
 }
