@@ -54,11 +54,13 @@ class ESP32Client:
     # request status report from the ESP32
     def status_report(self):
         print(f'Sending request for status report.')
+        self.send_msg('4:0')
         msg = '0:' + '\0'
         self.send_msg(msg)
 
         # TODO: read msg back
-        msg = chr(self.bus.read_byte(self.addr))
+        msg = "Message: "
+        msg += chr(self.bus.read_byte(self.addr))
         while msg[-1] != '\0':
             msg += chr(self.bus.read_byte(self.addr))
             time.sleep(0.05)
@@ -88,7 +90,7 @@ class ESP32Client:
 
         # read in 8 bytes = sizeof(double) 
         status = bytearray()
-        for i in range(0, self.num_current_bytes):
+        for i in range(0, 8):
             status.append(self.bus.read_byte(self.addr))
             time.sleep(0.05)
         time.sleep(0.1)
