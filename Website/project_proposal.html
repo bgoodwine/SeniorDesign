@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<!-- HTML Codes by Quackit.com -->
+<title>
+IrishSat: CubeSat Monitor PCB</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Anomaly, tumbling detection, & solar panel status subsystem for prototype CubeSat ">
+<style>
+body {background-color:#0b2340;background-repeat:no-repeat;background-position:top left;background-attachment:fixed;}
+h1{font-family:Verdana, sans-serif;color:#ffffff;background-color:#0b2340;}
+h2{font-family:Verdana, sans-serif;color:#ffffff;background-color:#0b2340;}
+h3{font-family:Verdana, sans-serif;color:#ffffff;background-color:#0b2340;}
+h4{font-family:Verdana, sans-serif;color:#ffffff;background-color:#0b2340;}
+h5{font-family:Verdana, sans-serif;color:#ffffff;background-color:#0b2340;}
+p {font-family:Verdana, sans-serif;font-size:14px;font-style:normal;font-weight:normal;color:#ffffff;background-color:#0b2340;}
+.button {
+    display: block;
+    width: 50%;
+    background-color: #c69107;
+    color: #0b2340;
+    padding: 10px 15px;
+    font-size: 16px;
+    cursor: pointer;
+    text-align: center;
+    border-radius: 5%;
+}
+</style>
+</head>
+<body>
+<h1>Project Proposal</h1>
+<h3>IrishSat: anomaly, tumbling detection, & solar panel status subsystem for prototype CubeSat </h3>
+<h5>Introduction</h5>
+<p>IrishSat is a satellite-design team with the mission of designing, building, and testing CubeSats to launch using NASA’s CubeSat Launch Initiative (CSLI). The CSLI is a program that provides opportunities for CubeSats built by U.S. universities, high schools and non-profit organizations to fly on upcoming launches. Each year, NASA releases an Announcement of Partnership Opportunity with detailed instructions on how an interested eligible organization may submit a proposal for a CubeSat project. IrishSat plans to complete its first CubeSat proposal by the end of the 2022-2023 academic year for submission to NASA in November 2023.</p> 
+<p>Since the creation of IrishSat in Fall 2020, the team has been developing the infrastructure to build and operate a CubeSat. For example, IrishSat has built a ground station on campus for satellite communication and an air bearing that can test the satellite’s orientation system by rotating it on a frictionless surface. Our team plans on designing a 1U CubeSat, which is a 10x10x10cm satellite that typically weighs less than 2 kg. The CubeSat will be launched into low-earth orbit which encompasses the area of space under 1,200 miles from Earth. </p>
+<h5>Problem Description</h5>
+<p>The CubeSat will operate over a 3 year cycle, but components and subsystems are expected to start experiencing significant failures in as early as 6 months. Additionally, the satellite will burn up when returning to earth, rendering most data unrecoverable.</p>
+<p>For the satellite to be successful over its lifetime, we must ensure that it will operate and transmit data despite any malfunctioning equipment. The data transmitted must be adjusted to reflect the state of the satellite and properly modify or ignore any faulty data, for example, from sensors. A haywire sensor’s inaccurate data could disrupt and invalidate the operation of multiple subsystems. If this error could be detected, the sensor could be rebooted (in an attempt to recover it) or otherwise ignored. The CubeSat’s actuators would then continue to function based on the best data, which would also be stored for future reference.</p>
+
+<form action="top_page.html">
+    <button type="submit" class="button">Home</button>
+  </form></body>
+</html>
