@@ -1,243 +1,36 @@
-
-
 // Include the Wire library for I2C
 #include <Wire.h>
 #include "Arduino.h"
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
+/*#include <SPI.h> // needed for BNO055 library
+#include <utility/imumaths.h>
+#include <Math.h>*/
 
-#define DEVICE_0 48
-#define DEVICE_1 6
-#define CURRENTPIN 4
-#define CALIB 2008
-#define MAXINDEX 7
+// Private libaries
+#include "PiComms.h"
+#include "Tumbling.h"
 
-union u{
-  double d;
-  char bytes[sizeof(double)];
-};
+// External TwoWire I2C wires from Tumbling.h and PiComms.h
+extern TwoWire PiBus;
+extern TwoWire ESPBus;
+extern Adafruit_BNO055 bno;
+extern Adafruit_MAX17048 maxlipo;
 
-union u current_current;
-int current_request = 0;
+extern String current_report;
 
-// return average of num_readings current measurements
-double readcurrent(int num_readings) {
-  double current_sum = 0;
-  for (int i = 0; i < num_readings; i++) {
-    // Read in current sensor analog signal
-    int data = analogRead(CURRENTPIN);
-
-    // data (0, 4095) -> voltage (0, 3.3)
-    double voltage = ((1.0*data)/4095.0)*3.3;
-
-    // voltage (0.62, 1.62) -> current (-20, 20)
-    current_sum = current_sum + (voltage - 1.62)*20;
-  }
-
-  // average
-  double current = current_sum/num_readings;
-  return current;
-}
-
-void send_sdr_msg() {
-  static int index = 0;
-  String msg = "Fake message for SDR :)";
-
-  Serial.print("Responding with char at index = ");
-  Serial.print(index);
-  Serial.print(" = ");
-  Serial.println(msg[index]);
-
-  Wire.write(msg[index]);
-  index++;
-  if (index >= msg.length()) {
-    index = 0;
-  }
-}
-
-void send_current() {
-  static int index = 0;
-  Serial.println("Function: Send Current.");
-
-  Serial.print("Responding with current: ");
-  Serial.print(current_current.d);
-  Serial.print(" A at index = ");
-  Serial.print(index);
-  Serial.print(" = ");
-  Serial.println(current_current.bytes[index], HEX);
-  Serial.println("");
-
-  // Write current byte requested from global current measurement
-  Wire.write(current_current.bytes[index]);
-  index++;
-  if (index > MAXINDEX) {
-    index = 0;
-  }
-}
-
-void requestEvent() {
-  // Respond as the current request ID dictates 
-  switch (current_request) {
-    case 0: {
-      // 0 - request for general checkin
-      //checkin();
-      break;
-    }
-    case 1: {
-      // 1 - send current reading from ESP32 to Pi
-      send_current();
-      break;
-    }
-    case 2: {
-      // 2 - send message from ESP32 for SDR to Pi
-      send_sdr_msg();
-      break;
-
-    }
-
-    default: {
-      Serial.print("Current request ID unknown: ");
-      Serial.println(current_request);
-      break;
-    }
-  }
-}
-
-// Request for checkin function
-// Message format: "0:"
-void checkin() {
-  Serial.println("Function: general checkin");
-}
-
-// Restart device function (turn power on)
-// Message format: "1:device_id"
-void restart_device(int device_id) {
-  Serial.println("Function: restart device");
-  Serial.print("Device ID: ");
-  Serial.println(device_id);
-
-  switch(device_id) {
-    case 0: {
-      digitalWrite(DEVICE_0, LOW);
-      break;
-    }
-    case 1: {
-      digitalWrite(DEVICE_1, LOW);
-      break;
-    }
-  }
-}
-
-// Shutdown device function (cut power)
-// Message format: "2:device_id"
-void shutdown_device(int device_id) {
-  Serial.println("Function: shutdown device");
-  Serial.print("Device ID: ");
-  Serial.println(device_id);
-  
-  switch(device_id) {
-    case 0: {
-      digitalWrite(DEVICE_0, HIGH);
-      break;
-    }
-    case 1: {
-      digitalWrite(DEVICE_1, HIGH);
-      break;
-    }
-  }
-}
-
-// Misc. message function
-// Message format: "3:message_from_pi" 
-// (NOTE: must be <=32B)
-void misc_msg(char *data) {
-  Serial.println("Function: misc. message");
-  Serial.print("Message: ");
-  Serial.println(data);
-}
-
-// Function that executes whenever data is received from master
-void receiveEvent(int bytes_to_read) {
-  int num_bytes = 32;
-  byte buf[num_bytes];
-  char msg_arr[num_bytes];
-  int msg_len = 0;
-  
-  // Read in data from Pi
-  Serial.println("Reading...");
-  Wire.readBytes(buf, num_bytes);
-  
-  // Convert from bytes to a string 
-  Serial.print("Bytes received: ");
-  for (int i = 0; i < num_bytes; i++) {
-    char hexCar[2];
-    sprintf(hexCar, "%02X", buf[i]);
-    char c = (char)buf[i];
-    if (c != '\n' && i != 0) {
-      msg_arr[i-1] = c;
-      msg_len++;
-    } else {
-      msg_arr[i] = '\0';
-    }
-    // Print each byte recieved as it is converted
-    Serial.print(hexCar);
-  }
-
-  // Convert char array to char *  
-  Serial.println("");
-  Serial.print("String recieved: ");
-  char *msg = msg_arr;
-  Serial.println(msg);
-  const char *delim = ":";
-
-  // Parse the opcode from the string
-  char *op_str = strtok(msg, delim);
-  int op = atoi(op_str);
-  Serial.print("Opcode: ");
-  Serial.println(op);
-
-  // Parse data after the opcode
-  char *data = strtok(NULL, delim);
-
-  // Call the function associated with the opcode 
-  // With appropriate parameters (sent in data)
-  switch(op) {
-    case 0: 
-    Serial.println("Calling 0...");
-    checkin();
-    break;
-
-    case 1: {
-    Serial.println("Calling 1...");
-    int restart_id = atoi(data);
-    restart_device(restart_id);
-    break;
-    }
-
-    case 2: {
-    Serial.println("Calling 2...");
-    int shutdown_id = atoi(data);
-    shutdown_device(shutdown_id);
-    break;
-    }
-
-    case 3: {
-      Serial.println("Calling 3...");
-      misc_msg(data);
-      break;
-    }
-
-    case 4: {
-      current_request = atoi(data);
-      Serial.print("Setting current request ID to ");
-      Serial.println(current_request);
-      break;
-    }
-
-    default:
-    Serial.println("ERROR: switch default :(");
-    break;
-
-  }
-}
+// Tumbling external global state variables
+extern int currentState;
+extern int oldCurrentState;
+extern int anomaly;
+extern float outputsArray[3];
+extern float tumbleTime;
+extern float tumbleStart;
+extern float stillStart;
+extern float stillTime;
+extern float batteryLevel;
+extern float oldBatteryLevel;
+extern float battThreshold;
 
 void setup() {
   // Serial monitor initialization 
@@ -245,44 +38,95 @@ void setup() {
   delay(500);
   while(!Serial);
 
-  // Join I2C bus A as slave with address 8
-  uint8_t addr = 0x08; // address: 0x08
-  int sda = 47; // connect SDA to Pi GPIO2
-  int scl = 21; // connect SDA to Pi GPIO3
-
-  Wire.begin(addr, sda, scl);
-  Serial.println("Joined bus A.");
-
-  // TODO: add second I2C connection here
-  //int imu_sda = 10;
-  //int imu_scl = 11;
-  //TwoWire IMU = TwiWire(0);
-  //IMU.begin(imu_sda, imu_sdl);
+  // Join I2C bus controlled by Pi as slave with address 0x08 
+  // NOTE: casting resolves overloading ambiguity!
+  PiBus.begin((uint8_t)ESP_ADDR, (int)PI_SDA, (int)PI_SCL);
+  Serial.println("Joined Pi I2C bus.");
   
-  // Register receiveEvent() as the function to run 
-  // When the S3 is talked to via I2C         
-  Wire.onReceive(receiveEvent);
-  Wire.onRequest(requestEvent);
-  
-  // Initialize "devices" (LEDs) for MOSFET control
-  // And turn "on" (LOW = "on")
+  // Register PiComms.h functions to handle I2C data from Pi 
+  PiBus.onReceive(receiveEvent);
+  PiBus.onRequest(requestEvent);
+
+  // Begin IMU I2C connection on ESP controlled bus
+  ESPBus.begin((int)ESP_SDA, (int)ESP_SCL);  
+
+  // Initialize "devices" (LEDs) for MOSFET control & turn "on" (LOW)
   pinMode(DEVICE_0, OUTPUT);
-  digitalWrite(DEVICE_0, LOW);
   pinMode(DEVICE_1, OUTPUT);
+  digitalWrite(DEVICE_0, LOW);
   digitalWrite(DEVICE_1, LOW);
 
-  // Initialize current sensor for analog input
+  // Initialize current sensor for analog input & current measurement
   pinMode(CURRENTPIN, INPUT);
-  // Initialize global current measurement
   current_current.d = 0; 
+
+  // Initialize tumbling detection output pins
+  pinMode(PR_en, OUTPUT);
+  pinMode(IMU_en, OUTPUT);
+  pinMode(Pi5_en, OUTPUT);
+  pinMode(SDR_en, OUTPUT);
+
+  // Write low all devices except IMU to initialize
+  digitalWrite(PR_en, LOW);
+  Serial.println("Photoresistor: OFF");
+  digitalWrite(IMU_en, HIGH);
+  Serial.println("IMU: ON");
+  digitalWrite(Pi5_en, LOW);
+  Serial.println("Pi: OFF");
+  digitalWrite(SDR_en, LOW);
+  Serial.println("SDR: OFF");
+
+  delay(1000);
+  
+  // Initialize tumbling detection input pins
+  pinMode(dl_in, INPUT);
+  pinMode(Pi5_in, INPUT);
+  pinMode(SDR_in, INPUT);
+
+    // Initialize MAX1704X (fuel gauge)
+  if(!maxlipo.begin(&ESPBus)) {
+    Serial.println("Oops, no MAX17048 detected...");
+  } else {
+    Serial.print(F("Found MAX17048"));
+    Serial.print(F(" with Chip ID: 0x")); 
+    Serial.println(maxlipo.getChipID(), HEX);
+  }
+
+  // Initialize BNO055 (IMU)
+  
+  // if(!bno.begin()) {
+  //   Serial.println("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+  // }
+  // else {
+  //   bno.setExtCrystalUse(true);
+  //   Serial.println("Found BNO55.");
+  // }
+
+  // Serial.println("Device Control System Initialized.");
+  // Serial.println("Anomaly/State Detection System Initialized.");
+  // Serial.println("Undeployed state detected...");
 
 }
 
 void loop() {
+  delay(3000);
+  
   // Read in current sensor analog signal
   current_current.d = readcurrent(10);
-  delay(1000);
   
-  // TODO: add IMU I2C control capabilities here (?)
-}
+  oldBatteryLevel = batteryLevel;
+  
+  // Check anomaly/state and send report
+  currentState = checkState(currentState, oldCurrentState, batteryLevel);
+  updateState(currentState, oldCurrentState);
+  anomaly = checkAnomalies(currentState);
+  batteryLevel = maxlipo.cellPercent();
+  // Serial.print(batteryLevel);
+  
+  current_report = sendReport(anomaly, oldBatteryLevel, batteryLevel);
+  Serial.print("Message for I2C transfer to Pi: ");
+  Serial.println(current_report);
+  current_report = " " + current_report;
 
+  oldCurrentState = currentState;
+}
