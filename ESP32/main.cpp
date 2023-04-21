@@ -10,6 +10,7 @@
 // Private libaries
 #include "PiComms.h"
 #include "Tumbling.h"
+#include "Sensors.h"
 
 // External TwoWire I2C wires from Tumbling.h and PiComms.h
 extern TwoWire PiBus;
