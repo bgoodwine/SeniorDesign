@@ -31,8 +31,8 @@ typedef union u{
   char bytes[sizeof(double)];
 }u;
 
-
-extern u current_current;
+extern u currentPi;
+extern u currentIMU;
 extern int current_request;
 
 double readcurrent(int num_readings);

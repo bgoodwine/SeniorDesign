@@ -15,7 +15,7 @@
 // External TwoWire I2C wires from Tumbling.h and PiComms.h
 extern TwoWire PiBus;
 extern TwoWire ESPBus;
-extern Adafruit_BNO055 bno;
+extern Adafruit_ICM20948 icm;
 extern Adafruit_MAX17048 maxlipo;
 
 extern String current_report;
@@ -59,7 +59,8 @@ void setup() {
 
   // Initialize current sensor for analog input & current measurement
   pinMode(CURRENTPIN, INPUT);
-  current_current.d = 0; 
+  currentPi.d = 0;
+  currentIMU.d = 0; 
 
   // Initialize tumbling detection output pins
   pinMode(PR_en, OUTPUT);
@@ -78,11 +79,19 @@ void setup() {
   Serial.println("SDR: OFF");
 
   delay(1000);
-  
-  // Initialize tumbling detection input pins
-  pinMode(dl_in, INPUT);
-  pinMode(Pi5_in, INPUT);
-  pinMode(SDR_in, INPUT);
+
+  /* Initialise IMU */
+  Serial.println("Adafruit ICM20948 test!");
+  // Try to initialize!
+  if (!icm.begin_I2C((uint8_t)0x68, &ESPBus, (int32_t)0)) {
+    // if (!icm.begin_SPI(ICM_CS)) {
+    // if (!icm.begin_SPI(ICM_CS, ICM_SCK, ICM_MISO, ICM_MOSI)) {
+
+    Serial.println("Failed to find ICM20948 chip");
+    while (1) {
+      delay(10);
+    }
+  }
 
     // Initialize MAX1704X (fuel gauge)
   if(!maxlipo.begin(&ESPBus)) {
@@ -93,27 +102,43 @@ void setup() {
     Serial.println(maxlipo.getChipID(), HEX);
   }
 
-  // Initialize BNO055 (IMU)
-  
-  // if(!bno.begin()) {
-  //   Serial.println("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-  // }
-  // else {
-  //   bno.setExtCrystalUse(true);
-  //   Serial.println("Found BNO55.");
-  // }
+  Serial.print("Gyro range set to: ");
+  switch (icm.getGyroRange()) {
+  case ICM20948_GYRO_RANGE_250_DPS:
+    Serial.println("250 degrees/s");
+    break;
+  case ICM20948_GYRO_RANGE_500_DPS:
+    Serial.println("500 degrees/s");
+    break;
+  case ICM20948_GYRO_RANGE_1000_DPS:
+    Serial.println("1000 degrees/s");
+    break;
+  case ICM20948_GYRO_RANGE_2000_DPS:
+    Serial.println("2000 degrees/s");
+    break;
+  }
 
-  // Serial.println("Device Control System Initialized.");
-  // Serial.println("Anomaly/State Detection System Initialized.");
-  // Serial.println("Undeployed state detected...");
+  uint8_t gyro_divisor = icm.getGyroRateDivisor();
+  float gyro_rate = 1100 / (1.0 + gyro_divisor);
+
+  Serial.print("Gyro data rate divisor set to: ");
+  Serial.println(gyro_divisor);
+  Serial.print("Gyro data rate (Hz) is approximately: ");
+  Serial.println(gyro_rate);
+
+  Serial.println("I2C connections ready.");
+  Serial.println("Device Control System Initialized.");
+  Serial.println("Anomaly/State Detection System Initialized.");
+  Serial.println("Undeployed state detected...");
 
 }
 
 void loop() {
   delay(3000);
   
-  // Read in current sensor analog signal
-  current_current.d = readcurrent(10);
+  // TODO: Read in current sensor analog signal for BOTH
+  currentPi.d = readcurrent(10);
+  currentIMU.d = currentPi.d; 
   
   oldBatteryLevel = batteryLevel;
   

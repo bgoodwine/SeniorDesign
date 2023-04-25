@@ -4,7 +4,8 @@
 #include "Arduino.h"
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
-#include <Adafruit_BNO055.h>
+#include <Adafruit_ICM20X.h>
+#include <Adafruit_ICM20948.h>
 #include "Adafruit_MAX1704X.h"
 #include <SPI.h> // needed for BNO055 library
 #include <stdint.h> // needed for int8_t datatype 
@@ -43,7 +44,8 @@
 //#define currSense_in A1
 
 extern TwoWire ESPBus;
-extern Adafruit_BNO055 bno;
+extern Adafruit_ICM20948 icm;
+//extern Adafruit_ICM20X icm;
 extern Adafruit_MAX17048 maxlipo;
 
 // Tumbling external global state variables

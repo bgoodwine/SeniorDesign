@@ -1,7 +1,8 @@
 #include "PiComms.h"
   
 int current_request = 0;
-u current_current = {0};
+u currentIMU = {0};
+u currentPi = {0};
 String current_report = "";
 TwoWire PiBus = TwoWire(0);
 
@@ -43,48 +44,64 @@ void send_sdr_msg() {
 // Request for checkin function
 // Message format: "0:"
 void checkin() {
+  static String report = "";
+  static char reportarray[BUFSIZ];
+
   static int index = 0;
+  if (index == 0) {
+    current_report.toCharArray(reportarray, current_report.length()+1);
+    report = String(reportarray);
+  }
+
   Serial.println("Function: general checkin");
   Serial.print("Message for Pi: ");
-  Serial.println(current_report);
+  Serial.println(report);
 
   Serial.print("Responding with message: ");
-  Serial.print(current_report);
+  Serial.print(report);
   Serial.print("Of length: ");
-  Serial.println(current_report.length());
+  Serial.println(report.length());
   Serial.print(" A at index = ");
   Serial.print(index);
   Serial.print(" = ");
-  Serial.print(current_report[index]);
+  Serial.print(report[index]);
   Serial.print(" = ");
-  Serial.println(current_report[index], HEX);
+  Serial.println(report[index], HEX);
   Serial.println("");
 
   // Write current byte requested from global current measurement
-  PiBus.write(current_report[index]);
+  PiBus.write(report[index]);
   index++;
-  if (index > current_report.length()) {
+  if (index > report.length()) {
     index = 0;
   }
 }
 
 void send_current() {
-  static int index = 0;
+  static int indexPi = 0;
+  static int indexIMU = 0;
+  static u reportCurrentPi;
+  static u reportCurrentIMU;
+
+  if (index == 0) {
+    reportCurrentPi.d = currentPi.d;
+    reportCurrentIMU.d = currentIMU.d;
+  }
   Serial.println("Function: Send Current.");
 
   Serial.print("Responding with current: ");
-  Serial.print(current_current.d);
+  Serial.print(currentPi.d);
   Serial.print(" A at index = ");
-  Serial.print(index);
+  Serial.print(indexPi);
   Serial.print(" = ");
-  Serial.println(current_current.bytes[index], HEX);
+  Serial.println(currentPi.bytes[indexPi], HEX);
   Serial.println("");
 
   // Write current byte requested from global current measurement
-  PiBus.write(current_current.bytes[index]);
-  index++;
-  if (index > MAXINDEX) {
-    index = 0;
+  PiBus.write(currentPi.bytes[indexPi]);
+  indexPi++;
+  if (indexPi > MAXINDEX) {
+    indexPi = 0;
   }
 }
 
