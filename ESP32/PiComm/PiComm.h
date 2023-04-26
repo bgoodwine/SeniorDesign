@@ -2,6 +2,7 @@
 #define __PiComms__
 
 #include "Arduino.h"
+#include "Tumbling.h"
 #include <Wire.h>
 
 // i2c definitions 
@@ -31,9 +32,15 @@ typedef union u{
   char bytes[sizeof(double)];
 }u;
 
+typedef union f{
+  float f;
+  char bytes[sizeof(float)];
+}f;
+
 extern u currentPi;
 extern u currentIMU;
 extern int current_request;
+extern float batteryLevel;
 
 double readcurrent(int num_readings);
 void send_sdr_msg();

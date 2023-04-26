@@ -5,6 +5,7 @@ u currentIMU = {0};
 u currentPi = {0};
 String current_report = "";
 TwoWire PiBus = TwoWire(0);
+extern float batteryLevel;
 
 // return average of num_readings current measurements
 double readcurrent(int num_readings) {
@@ -74,35 +75,127 @@ void checkin() {
   index++;
   if (index > report.length()) {
     index = 0;
+    Serial.println("RESETTING STATUS INDEX");
   }
 }
 
 void send_current() {
-  static int indexPi = 0;
-  static int indexIMU = 0;
+  static int index   = 0;
+  int maxindex = sizeof(double);
+  int indexPi = index; 
+  int indexIMU = index - maxindex; 
+  int indexBatt = index - maxindex*2;
   static u reportCurrentPi;
   static u reportCurrentIMU;
+  static u batteryLevel;
 
-  if (index == 0) {
+  if (indexPi == 0 && indexIMU == 0 && indexBatt == 0) {
     reportCurrentPi.d = currentPi.d;
     reportCurrentIMU.d = currentIMU.d;
+    batteryLevel.d = (double)maxlipo.cellPercent();
+  }
+
+  // 0-7 -> send Pi current
+  if (indexPi < maxindex) {
+    Serial.print("Pi current: ");
+    Serial.print(currentPi.d);
+    Serial.print(" at pi index = ");
+    Serial.print(indexPi);
+    Serial.print(" & index = ");
+    Serial.println(index);
+    /*Serial.print(" = ");
+    Serial.println(currentPi.bytes[indexPi], HEX);
+    Serial.println("");*/
+    PiBus.write(currentPi.bytes[indexPi]);
+  // 8-15 = 0-7 -> send IMU current 
+  } else if (indexIMU < maxindex) {
+    Serial.print("Responding with IMU current: ");
+    Serial.print(currentIMU.d);
+    Serial.print(" at IMU index = ");
+    Serial.print(indexIMU);
+    Serial.print(" & index = ");
+    Serial.println(index);
+    /*Serial.print(" = ");
+    Serial.println(currentIMU.bytes[indexIMU], HEX);
+    Serial.println("");*/
+    PiBus.write(currentIMU.bytes[indexIMU]);
+  // 16-23 = 0-7 -> send battery %
+  } else if (indexBatt < maxindex) {
+    Serial.print("Responding with Battery Percentage: ");
+    Serial.print(batteryLevel.d);
+    Serial.print(" at batt index = ");
+    Serial.print(indexBatt);
+    Serial.print(" & index = ");
+    Serial.println(index);
+    /*Serial.print(" = ");
+    Serial.println(batteryLevel.bytes[indexBatt], HEX);
+    Serial.println("");*/
+    // Write current byte requested from global current measurement
+    PiBus.write(batteryLevel.bytes[indexBatt]);
+  }
+  
+  index++;
+
+  if (index >= maxindex*3) {
+    index = 0;
+    Serial.println("INDEX RESET");
+  }
+
+  /*static int index   = 0;
+  int indexPi = index;
+  int indexIMU = index - MAXINDEX;
+  int indexBatt = index - MAXINDEX*2;
+  static u reportCurrentPi;
+  static u reportCurrentIMU;
+  static u batteryLevel;
+
+  if (indexPi == 0 && indexIMU == 0 && indexBatt == 0) {
+    reportCurrentPi.d = currentPi.d;
+    reportCurrentIMU.d = currentIMU.d;
+    batteryLevel.d = (double)maxlipo.cellPercent();
   }
   Serial.println("Function: Send Current.");
 
-  Serial.print("Responding with current: ");
-  Serial.print(currentPi.d);
-  Serial.print(" A at index = ");
-  Serial.print(indexPi);
-  Serial.print(" = ");
-  Serial.println(currentPi.bytes[indexPi], HEX);
-  Serial.println("");
-
-  // Write current byte requested from global current measurement
-  PiBus.write(currentPi.bytes[indexPi]);
-  indexPi++;
-  if (indexPi > MAXINDEX) {
-    indexPi = 0;
+  if (indexPi <= MAXINDEX) {
+    Serial.print("Responding with PI current: ");
+    Serial.print(currentPi.d);
+    Serial.print(" A at index = ");
+    Serial.print(indexPi);
+    Serial.print(" = ");
+    Serial.println(currentPi.bytes[indexPi], HEX);
+    Serial.println("");
+    // Write current byte requested from global current measurement
+    PiBus.write(currentPi.bytes[indexPi]);
+  } else if (indexIMU <= MAXINDEX*2) {
+    Serial.print("Responding with IMU current: ");
+    Serial.print(currentIMU.d);
+    Serial.print(" A at index = ");
+    Serial.print(indexIMU);
+    Serial.print(" = ");
+    Serial.println(currentIMU.bytes[indexIMU], HEX);
+    Serial.println("");
+    // Write current byte requested from global current measurement
+    PiBus.write(currentIMU.bytes[indexIMU]);
+  } else if (indexBatt <= MAXINDEX*3) {
+    Serial.print("Responding with Battery Percentage: ");
+    Serial.print(batteryLevel.d);
+    Serial.print(" A at index = ");
+    Serial.print(indexBatt);
+    Serial.print(" = ");
+    Serial.println(batteryLevel.bytes[indexBatt], HEX);
+    Serial.println("");
+    // Write current byte requested from global current measurement
+    PiBus.write(batteryLevel.bytes[indexBatt]);
   }
+  
+  if (index >= MAXINDEX*3) {
+    //indexPi = 0;
+    index = 0;
+    Serial.println("Pi is DONE");
+  } else {
+    index++;
+  }*/
+
 }
 
 void requestEvent() {

@@ -41,6 +41,7 @@ void setup() {
 
   // Join I2C bus controlled by Pi as slave with address 0x08 
   // NOTE: casting resolves overloading ambiguity!
+  // TODO: join the bus AFTER the Pi turns on?? 
   PiBus.begin((uint8_t)ESP_ADDR, (int)PI_SDA, (int)PI_SCL);
   Serial.println("Joined Pi I2C bus.");
   
