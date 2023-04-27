@@ -87,6 +87,9 @@ void measure_imu_currents(double &pi_imu_current, double &esp_imu_current, doubl
   Serial.print("ESP's IMU's current: ");
   Serial.print(esp_imu_current);
   Serial.println("mA");
+  Serial.print("Pi's current:        ");
+  Serial.print(pi_current);
+  Serial.println("mA");
   Serial.print("\n");
 
 }

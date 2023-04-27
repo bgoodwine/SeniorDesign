@@ -8,10 +8,9 @@
 #define PI_REF_VAL 5.0
 
 // current reading input pins 
-// current reading input pins 
-#define PI_IMU_CURRENT  39  // Pi's IMU on pin 7 = I39
-#define ESP_IMU_CURRENT 34 // ESP's IMU is pin 9 = I34
-#define PI_CURRENT      35
+#define PI_IMU_CURRENT  7  // Pi's IMU on pin 7 = I39
+#define ESP_IMU_CURRENT 16 // ESP's IMU is pin 9 = I34
+#define PI_CURRENT      17
 
 // take average 500 times 
 extern const int num_samples;
@@ -26,6 +25,6 @@ extern float esp_imu_sensitivity;
 //extern float esp_imu_Vref;
 //extern float pi_imu_Vref;
 
-void measure_imu_currents(double &pi_imu_current, double &esp_imu_current, double &pi_current);
+void measure_imu_currents(float &pi_imu_current, float &esp_imu_current);
 
 #endif

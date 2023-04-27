@@ -46,10 +46,9 @@ int lowPowerCheck(){
 
 int dayCycleCheck(){
   int val;
-  //val = analogRead(PR_in);
-  Serial.println("ADD PR CURRENT READING HERE!");
-//  Serial.print("PR voltage: ");
-//  Serial.println(val);
+  val = analogRead(PR_in);
+  Serial.print("PR voltage: ");
+  Serial.println(val);
 
   if (val > 750){
     return 1;
@@ -278,8 +277,10 @@ int checkAnomalies(int currentState)
   //battv = analogRead(batt_in);
   //IMUv = analogRead(IMU_in);
   Serial.println("PUT IMU CURRENT READING IN HERE");
+  Serial.println("PUT PI 5 CURRENT READING IN!");
   //Pi5v = digitalRead(Pi5_in);
-  //SDRv = digitalRead(SDR_in);
+  // TODO: replace with current reading here!!! 
+  SDRv = analogRead(SDR_in);
 
 //  Serial.print("SDRv: ");
 //  Serial.println(SDRv);
@@ -296,9 +297,7 @@ int checkAnomalies(int currentState)
   /*if (battv < floor(200.0*3)) {
     return battAnomaly;
   }*/
-
-  // TODO: this has to be mapped to a current!!! 
-  /*if (((IMUv < floor(200.0*1.6))||(IMUv > floor(200.0*2.0)))&&(IMUon)) {
+  if (((IMUv < floor(200.0*1.6))||(IMUv > floor(200.0*2.0)))&&(IMUon)) {
     return IMUAnomaly;
   }
 //  else if (((Pi5v < floor(4.75*200.0))||(Pi5v > floor(5.25*200.0)))&&(Pion)) {
@@ -311,7 +310,7 @@ int checkAnomalies(int currentState)
   }
   else {
     return noAnomaly;
-  }*/
+  }
   
 }
 
@@ -320,67 +319,73 @@ void updateState(int currentState, int oldCurrentState){
   if (oldCurrentState != currentState){
     if (currentState == tumblingState){
       // turn on motor board
-      //digitalWrite(Pi5_en, HIGH);
-      Serial.println("Wish I could turn Pi: ON");
-      //digitalWrite(SDR_en, LOW);
-      Serial.println("Wish I could turn SDR: OFF");
-      //digitalWrite(PR_en, HIGH);
-      Serial.println("Wish I could turn Photoresistor: ON");
+      digitalWrite(Pi5_en, HIGH);
+      Serial.println("Pi: ON");
+  //    digitalWrite(Pi33_en, HIGH);
+      digitalWrite(SDR_en, LOW);
+      Serial.println("SDR: OFF");
+      digitalWrite(PR_en, HIGH);
+      Serial.println("Photoresistor: ON");
     }
     else if (currentState == dayCycle){
       // turn on motor board
-      //digitalWrite(PR_en, HIGH);
-      Serial.println("With I could turn Photoresistor: ON");
-      //digitalWrite(Pi5_en, HIGH);
-      Serial.println("With I could turn Pi: ON");
-      //digitalWrite(SDR_en, LOW);
-      Serial.println("Wish I could turn SDR: OFF");
-      //digitalWrite(IMU_en, HIGH);
-      Serial.println("Wish I could turn IMU: ON");
+      digitalWrite(PR_en, HIGH);
+      Serial.println("Photoresistor: ON");
+      digitalWrite(Pi5_en, HIGH);
+      Serial.println("Pi: ON");
+  //    digitalWrite(Pi33_en, HIGH);
+      digitalWrite(SDR_en, LOW);
+      Serial.println("SDR: OFF");
+      digitalWrite(IMU_en, HIGH);
+      Serial.println("IMU: ON");
     }
     else if (currentState == nightCycle){
       // turn off motor board
-      //digitalWrite(PR_en, HIGH);
-      Serial.println("Wish I could turn Photoresistor: ON");
-      //digitalWrite(Pi5_en, LOW);
-      Serial.println("Wish I could turn Pi: OFF");
-      //digitalWrite(SDR_en, LOW);
-      Serial.println("Wish I could turn SDR: OFF");
-      //digitalWrite(IMU_en, LOW);
-      Serial.println("Wish I could turn IMU: OFF");
+      digitalWrite(PR_en, HIGH);
+      Serial.println("Photoresistor: ON");
+  //    digitalWrite(Pi33_en, LOW);
+      digitalWrite(Pi5_en, LOW);
+      Serial.println("Pi: OFF");
+      digitalWrite(SDR_en, LOW);
+      Serial.println("SDR: OFF");
+      digitalWrite(IMU_en, LOW);
+      Serial.println("IMU: OFF");
     }
     else if (currentState == lowPower){
       // turn off motor board
-      //digitalWrite(PR_en, LOW);
-      Serial.println("Wish I could turn Photoresistor: OFF");
-      //digitalWrite(Pi5_en, LOW);
-      Serial.println("Wish I could turn Pi: OFF");
-      //digitalWrite(SDR_en, LOW);
-      Serial.println("Wish I could turn SDR: OFF");
-      //digitalWrite(IMU_en, LOW);
-      Serial.println("Wish I could turn IMU: OFF");
+      digitalWrite(PR_en, LOW);
+      Serial.println("Photoresistor: OFF");
+  //    digitalWrite(Pi33_en, LOW);
+      digitalWrite(Pi5_en, LOW);
+      Serial.println("Pi: OFF");
+      digitalWrite(SDR_en, LOW);
+      Serial.println("SDR: OFF");
+      digitalWrite(IMU_en, LOW);
+      Serial.println("IMU: OFF");
     }
     else if (currentState == downlink){
       // turn on motor board
-      //digitalWrite(PR_en, HIGH);
-      Serial.println("Wish I turn Photoresistor: ON");
-      //digitalWrite(Pi5_en, HIGH);
-      Serial.println("Wish I could turn Pi: ON");
-      //digitalWrite(SDR_en, HIGH);
-      Serial.println("Wish I could turn SDR: ON");
-      //digitalWrite(IMU_en, HIGH);
-      Serial.println("Wish I could turn IMU: ON"); 
+      digitalWrite(PR_en, HIGH);
+      Serial.println("Photoresistor: ON");
+  //    digitalWrite(Pi33_en, HIGH);
+      digitalWrite(Pi5_en, HIGH);
+      Serial.println("Pi: ON");
+      digitalWrite(SDR_en, HIGH);
+      Serial.println("SDR: ON");
+      digitalWrite(IMU_en, HIGH);
+      Serial.println("IMU: ON"); 
     }
     else if (currentState == lowPower){
       // turn on motor board
-      //digitalWrite(PR_en, LOW);
-      Serial.println("Wish I could turn Photoresistor: OFF");
-      //digitalWrite(Pi5_en, LOW);
-      Serial.println("Wish I could turn Pi: OFF");
-      //digitalWrite(SDR_en, LOW);
-      Serial.println("Wish I could turn SDR: OFF");
-      //digitalWrite(IMU_en, LOW);
-      Serial.println("Wish I could turn IMU: OFF"); 
+      digitalWrite(PR_en, LOW);
+      Serial.println("Photoresistor: OFF");
+  //    digitalWrite(Pi33_en, HIGH);
+      digitalWrite(Pi5_en, LOW);
+      Serial.println("Pi: OFF");
+      digitalWrite(SDR_en, LOW);
+      Serial.println("SDR: OFF");
+      digitalWrite(IMU_en, LOW);
+      Serial.println("IMU: OFF"); 
     }
     else if (currentState == error){
       Serial.println("State update error");
