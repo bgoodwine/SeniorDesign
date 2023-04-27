@@ -27,46 +27,74 @@ class ESP32Client:
         self.num_current_bytes = 8 # size of a double
 
     # send one 32B message to Pi
-    def send_msg(self, msg):
+    def send_msg(self, msg, verbose=False):
         if len(msg) > 32:
             print('ERROR: msg is > 32B, use send_long_msg >:(')
-            return
+            return False
         
         # normalize to 32B
         while len(msg) < 32:
             msg = msg + '\n'
 
-        print(f'Sending 32B message: {msg.strip()}')
-        print(f'Length of message:   {len(msg)}')
-        print('')
+        if verbose:
+            print(f'Sending 32B message: {msg.strip()}')
+            print(f'Length of message:   {len(msg)}')
+            print('')
 
         # convert to byte array
         byte_msg = bytearray()
         byte_msg.extend(map(ord, msg))
-        print(f'bytes: {byte_msg}')
-        print(f'len:   {len(byte_msg)}')
-        print('')
+        if verbose:
+            print(f'bytes: {byte_msg}')
+            print(f'len:   {len(byte_msg)}')
+            print('')
 
         # write bytes
         self.bus.write_i2c_block_data(self.addr, self.offset, byte_msg)
-        print('Done sending.')
+        if verbose:
+            print('Done sending.')
+        return True
 
     # request status report from the ESP32
-    def status_report(self):
-        print(f'Sending request for status report.')
+    def get_anomaly_report(self):
+        # send status report request to esp
         self.send_msg('4:0')
-        msg = '0:' + '\0'
-        self.send_msg(msg)
-
-        # TODO: read msg back
-        msg = "Message: "
+        #msg = '0:' + '\0'
+        #if not self.send_msg(msg):
+        #    return ''
+        
+        msg = ''
+        # read response from esp
         msg += chr(self.bus.read_byte(self.addr))
         while msg[-1] != '\0':
             msg += chr(self.bus.read_byte(self.addr))
             time.sleep(0.05)
         time.sleep(0.1)
 
-        print(msg)
+        # remove opcode:
+        #msg = msg[2:]
+
+        return msg
+    
+    def get_tumbling_report(self):
+        # send status report request to esp
+        self.send_msg('4:3')
+        #msg = '0:' + '\0'
+        #if not self.send_msg(msg):
+        #    return ''
+        
+        msg = ''
+        # read response from esp
+        msg += chr(self.bus.read_byte(self.addr))
+        while msg[-1] != '\0':
+            msg += chr(self.bus.read_byte(self.addr))
+            time.sleep(0.05)
+        time.sleep(0.1)
+
+        # remove opcode:
+        #msg = msg[2:]
+        return msg
+
 
     # request message from ESP32 for SDR
     def get_msg(self):
@@ -84,20 +112,43 @@ class ESP32Client:
         return msg
 
     # request current data from ESP32
-    def get_current(self):
-        # opcode 4 sets request id, request id 1 is send current
+    def get_current_sensor_readings(self):
+        # opcode 4 sets request id, request id 1 is send sensor readings
         self.send_msg('4:1')
 
-        # read in 8 bytes = sizeof(double) 
+        # read in 8 bytes = sizeof(double) for Pi current
         status = bytearray()
         for i in range(0, 8):
             status.append(self.bus.read_byte(self.addr))
             time.sleep(0.05)
         time.sleep(0.1)
+        piIMUCurrent = struct.unpack('d', status)[0]
+        
+        # read in ESP's IMU's current
+        status = bytearray()
+        for i in range(0, 8): # 8 bytes = sizeof(double)
+            status.append(self.bus.read_byte(self.addr))
+            time.sleep(0.05)
+        time.sleep(0.1)
+        espIMUCurrent = struct.unpack('d', status)[0]
+        
+        # read in Pi's IMU's current
+        status = bytearray()
+        for i in range(0, 8):
+            status.append(self.bus.read_byte(self.addr))
+            time.sleep(0.05)
+        time.sleep(0.1)
+        piCurrent = struct.unpack('d', status)[0]
+        
+        # read in battery &
+        status = bytearray()
+        for i in range(0, 8):
+            status.append(self.bus.read_byte(self.addr))
+            time.sleep(0.05)
+        time.sleep(0.1)
+        batteryPerc = struct.unpack('d', status)[0]
 
-        current = struct.unpack('d', status)[0]
-        print(current)
-        return current
+        return piIMUCurrent, espIMUCurrent, piCurrent, batteryPerc
 
     def restart_sensor(self, sensor_id):
         print(f'Sending request to restart sensor {sensor_id}')
@@ -117,16 +168,23 @@ class ESP32Client:
     
 def main():
     esp = ESP32Client()
-    print("Enter command to send to ESP32:")
-    print("Options:")
-    print('\tcurrent   - get current reading from esp32')
-    print('\tsdr       - get fake message from esp32 for sdr')
-    print('\tstatus    - get status report from esp32')
-    print('\ton:id     - power on sensor with id = id')
-    print('\toff:id    - power off sensor with id = id')
-    print('\tany text  - send text as misc. message to esp32')
 
     while True:
+        # get status report
+        msg = esp.get_tumbling_report()
+        print(f'Tumbling report from ESP32: {msg}')
+        msg = esp.get_anomaly_report()
+        print(f'Anomaly report from ESP32: {msg}')
+
+        # get current values
+        piIMUCurrent, espIMUCurrent, piCurrent, batteryLevel = esp.get_current_sensor_readings()
+        print(f'Pi IMU Current:   {piIMUCurrent:.2f} A')
+        print(f'ESP IMU Current:  {espIMUCurrent:.2f} A')
+        print(f'Pi Current:       {piCurrent:.2f} A')
+        print(f'Battery %:        {batteryLevel:.2f}%')
+        time.sleep(3)
+        
+        '''
         msg = input(">  ")
         if msg == 'status':
             esp.status_report()
@@ -145,6 +203,7 @@ def main():
             break
         else:
             esp.misc_msg(msg)
+            '''
 
 if __name__ == '__main__':
     main()
