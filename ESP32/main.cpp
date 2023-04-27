@@ -2,19 +2,20 @@
 #include <Wire.h>
 #include "Arduino.h"
 #include <Adafruit_Sensor.h>
-#include <Adafruit_BNO055.h>
-/*#include <SPI.h> // needed for BNO055 library
-#include <utility/imumaths.h>
-#include <Math.h>*/
+//#include <Adafruit_BNO055.h>
+//#include <SPI.h> // needed for BNO055 library
+//#include <utility/imumaths.h>
+//#include <Math.h>
 
 // Private libaries
 #include "PiComms.h"
 #include "Tumbling.h"
+#include "Sensors.h"
 
 // External TwoWire I2C wires from Tumbling.h and PiComms.h
 extern TwoWire PiBus;
 extern TwoWire ESPBus;
-extern Adafruit_BNO055 bno;
+extern Adafruit_ICM20948 icm;
 extern Adafruit_MAX17048 maxlipo;
 
 extern String current_report;
@@ -32,14 +33,47 @@ extern float batteryLevel;
 extern float oldBatteryLevel;
 extern float battThreshold;
 
+extern u currentPi;
+extern u currentESPIMU;
+extern u currentPiIMU;
+
 void setup() {
   // Serial monitor initialization 
   Serial.begin(115200);
   delay(500);
   while(!Serial);
+  Serial.println("Serial begun.");
+
+  // check all enable outputs 
+  pinMode(PR_en, OUTPUT);           // devices enable pins
+  pinMode(Pi5_en, OUTPUT);
+  pinMode(SDR_en, OUTPUT); 
+  pinMode(IMU_en, OUTPUT);          // IMUs
+  pinMode(PI_IMU_en, OUTPUT); 
+  pinMode(LVL_SHFT_EN, OUTPUT);     // level shifters
+  pinMode(LVL_SHFT_PI_EN, OUTPUT);
+  pinMode(DCDC_EN, OUTPUT);         // DC-DC converter 
+
+  // write all enable outputs high
+  digitalWrite(PR_en, HIGH);
+  digitalWrite(Pi5_en, HIGH);
+  digitalWrite(SDR_en, HIGH);
+  digitalWrite(IMU_en, HIGH);
+  digitalWrite(PI_IMU_en, HIGH);
+
+  // enable i2c communication periferals 
+  digitalWrite(LVL_SHFT_EN, HIGH);
+  digitalWrite(LVL_SHFT_PI_EN, HIGH);
+  Serial.println("Level shifters for Pi and ESP's IMU enabled.");
+  digitalWrite(DCDC_EN, HIGH);
+  Serial.println("DC-DC converter enabled.");
+
+  // initialize current sensor pins 
+  pinMode(PI_IMU_CURRENT, INPUT);
+  pinMode(ESP_IMU_CURRENT, INPUT);
+  pinMode(PI_CURRENT, INPUT);
 
   // Join I2C bus controlled by Pi as slave with address 0x08 
-  // NOTE: casting resolves overloading ambiguity!
   PiBus.begin((uint8_t)ESP_ADDR, (int)PI_SDA, (int)PI_SCL);
   Serial.println("Joined Pi I2C bus.");
   
@@ -50,83 +84,107 @@ void setup() {
   // Begin IMU I2C connection on ESP controlled bus
   ESPBus.begin((int)ESP_SDA, (int)ESP_SCL);  
 
-  // Initialize "devices" (LEDs) for MOSFET control & turn "on" (LOW)
-  pinMode(DEVICE_0, OUTPUT);
-  pinMode(DEVICE_1, OUTPUT);
-  digitalWrite(DEVICE_0, LOW);
-  digitalWrite(DEVICE_1, LOW);
-
-  // Initialize current sensor for analog input & current measurement
-  pinMode(CURRENTPIN, INPUT);
-  current_current.d = 0; 
-
-  // Initialize tumbling detection output pins
-  pinMode(PR_en, OUTPUT);
-  pinMode(IMU_en, OUTPUT);
-  pinMode(Pi5_en, OUTPUT);
-  pinMode(SDR_en, OUTPUT);
+  // initialize global current values 
+  currentPi.d = 0;
+  currentPiIMU.d = 0;
+  currentESPIMU.d = 0; 
 
   // Write low all devices except IMU to initialize
-  digitalWrite(PR_en, LOW);
+  /*digitalWrite(PR_en, LOW);
   Serial.println("Photoresistor: OFF");
   digitalWrite(IMU_en, HIGH);
   Serial.println("IMU: ON");
   digitalWrite(Pi5_en, LOW);
   Serial.println("Pi: OFF");
   digitalWrite(SDR_en, LOW);
-  Serial.println("SDR: OFF");
+  Serial.println("SDR: OFF");*/
 
   delay(1000);
-  
-  // Initialize tumbling detection input pins
-  pinMode(dl_in, INPUT);
-  pinMode(Pi5_in, INPUT);
-  pinMode(SDR_in, INPUT);
+
+  // Initialise IMU
+  Serial.println("Adafruit ICM20948 test!");
+  // Try to initialize!
+  if (!icm.begin_I2C((uint8_t)0x68, &ESPBus, (int32_t)0)) {
+    Serial.println("Failed to find ICM20948 chip");
+    while (1) {
+      delay(10);
+    }
+  }
 
     // Initialize MAX1704X (fuel gauge)
   if(!maxlipo.begin(&ESPBus)) {
     Serial.println("Oops, no MAX17048 detected...");
+    while (1);
   } else {
     Serial.print(F("Found MAX17048"));
     Serial.print(F(" with Chip ID: 0x")); 
     Serial.println(maxlipo.getChipID(), HEX);
   }
 
-  // Initialize BNO055 (IMU)
-  
-  // if(!bno.begin()) {
-  //   Serial.println("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-  // }
-  // else {
-  //   bno.setExtCrystalUse(true);
-  //   Serial.println("Found BNO55.");
-  // }
+  Serial.print("Gyro range set to: ");
+  switch (icm.getGyroRange()) {
+  case ICM20948_GYRO_RANGE_250_DPS:
+    Serial.println("250 degrees/s");
+    break;
+  case ICM20948_GYRO_RANGE_500_DPS:
+    Serial.println("500 degrees/s");
+    break;
+  case ICM20948_GYRO_RANGE_1000_DPS:
+    Serial.println("1000 degrees/s");
+    break;
+  case ICM20948_GYRO_RANGE_2000_DPS:
+    Serial.println("2000 degrees/s");
+    break;
+  }
 
-  // Serial.println("Device Control System Initialized.");
-  // Serial.println("Anomaly/State Detection System Initialized.");
-  // Serial.println("Undeployed state detected...");
+  uint8_t gyro_divisor = icm.getGyroRateDivisor();
+  float gyro_rate = 1100 / (1.0 + gyro_divisor);
+
+  Serial.print("Gyro data rate divisor set to: ");
+  Serial.println(gyro_divisor);
+  Serial.print("Gyro data rate (Hz) is approximately: ");
+  Serial.println(gyro_rate);
+
+  Serial.println("I2C connections ready.");
+  Serial.println("Device Control System Initialized.");
+  Serial.println("Anomaly/State Detection System Initialized.");
+  Serial.println("Undeployed state detected...");
 
 }
 
 void loop() {
-  delay(3000);
+  /*delay(3000);
   
-  // Read in current sensor analog signal
-  current_current.d = readcurrent(10);
+  // TODO: Read in current sensor analog signal for BOTH
+  //currentPi.d = readcurrent(10);
+
+  double pi_imu_current;
+  double esp_imu_current;
+  double pi_current;
+  measure_imu_currents(pi_imu_current, esp_imu_current, pi_current);
+  Serial.println("Currents measured.");
+
+  // set global current values 
+  currentPiIMU.d = pi_imu_current; 
+  currentESPIMU.d = esp_imu_current;
+  currentPi.d = pi_current;
   
-  oldBatteryLevel = batteryLevel;
+  oldBatteryLevel = batteryLevel;*/
   
   // Check anomaly/state and send report
-  currentState = checkState(currentState, oldCurrentState, batteryLevel);
+  /*currentState = checkState(currentState, oldCurrentState, batteryLevel);
   updateState(currentState, oldCurrentState);
-  anomaly = checkAnomalies(currentState);
-  batteryLevel = maxlipo.cellPercent();
-  // Serial.print(batteryLevel);
+  anomaly = checkAnomalies(currentState);*/
   
-  current_report = sendReport(anomaly, oldBatteryLevel, batteryLevel);
+  /*batteryLevel = maxlipo.cellPercent();
+  Serial.print("Battery percentage:  ");
+  Serial.print(batteryLevel);
+  Serial.println(" %");*/
+  
+  /*current_report = sendReport(anomaly, oldBatteryLevel, batteryLevel);
   Serial.print("Message for I2C transfer to Pi: ");
   Serial.println(current_report);
   current_report = " " + current_report;
 
-  oldCurrentState = currentState;
+  oldCurrentState = currentState;*/
 }
