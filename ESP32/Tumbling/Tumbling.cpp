@@ -46,12 +46,12 @@ int lowPowerCheck(){
 
 int dayCycleCheck(){
   int val;
-  //val = analogRead(PR_in);
-  //Serial.print("PR voltage: ");
-  //Serial.println(val);
+  val = analogRead(PR_in);
+  Serial.print("\nPR voltage: ");
+  Serial.println(val);
+  Serial.println("");
 
-  return 1; // overwrite
-  if (val > 750){
+  if (val > 4090){
     return 1;
   }
   else {
@@ -107,7 +107,15 @@ void tumblingDetection(float (& outputsArray)[3])
 //  Serial.println(tumbleStart);
 
   // TODO: tweak these??
-  if ((abs(x) > 1) || (abs(y) > 1) || (abs(z) > 1)) {
+  Serial.println();
+  Serial.print("x = ");
+  Serial.print(x);
+  Serial.print(" y = ");
+  Serial.print(y);
+  Serial.print(" z =  ");
+  Serial.println(z);
+  Serial.println();
+  if ((abs(x) > 0.05) || (abs(y) > 0.05) || (abs(z) > 0.05)) {
     
     stillStart = 0;
     
@@ -175,6 +183,11 @@ int checkState(int currentState, int oldCurrentState, float batteryLevel)
     tumblingBool = outputsArray[1];
     tumblingBool = int(tumblingBool);
   }
+
+  // add in for demo
+  //if(currentState == undeployed) {
+  //  tumblingBool = int(1);
+  //}
 
   if (currentState == undeployed) {
     if (!tumblingBool) {

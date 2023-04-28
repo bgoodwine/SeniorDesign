@@ -115,8 +115,8 @@ void setup() {
   // Write low all devices except IMU to initialize
   digitalWrite(PR_en, LOW);
   Serial.println("Photoresistor: OFF");
-  digitalWrite(IMU_en, LOW);
-  Serial.println("IMU: OFF");
+  digitalWrite(IMU_en, HIGH);
+  Serial.println("IMU: ON");
   //digitalWrite(Pi5_en, HIGH);
   //Serial.println("Pi: OFF");
   digitalWrite(SDR_en, LOW);
@@ -210,20 +210,18 @@ void loop() {
   current_anomaly_report = measure_imu_currents(piIMUCurrent, espIMUCurrent, piCurrent);
   current_anomaly_report = " " + current_anomaly_report;
   //current_anomaly_report = "anomolies... >:)";
-  //Serial.println(current_anomaly_report);
+  Serial.println(current_anomaly_report);
   //current_anomaly_report = " " + current_anomaly_report;
 
-  currentState = 0;
   current_tumbling_state = currentState;
   Serial.println(current_tumbling_state);
 
-  currentState = 0;
+  //currentState = 0;
 
+  // kickstart tumbling w/o actually tumbling 
   /*i++;
-  if (i == 5) {
-    digitalWrite(IMU_en, LOW);
-    digitalWrite(PI_IMU_en, LOW);
-    Serial.println("IMUs NOT enabled.");
-  }*/
+  if (i == 2) {
+    currentState = tumbling;
+  } */
   
 }
