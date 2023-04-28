@@ -174,7 +174,7 @@ def main():
         msg = esp.get_tumbling_report()
         print(f'Tumbling report from ESP32: {msg}')
         msg = esp.get_anomaly_report()
-        print(f'Anomaly report from ESP32: {msg}')
+        print(f'Anomaly report from ESP32:  {msg}')
 
         # get current values
         piIMUCurrent, espIMUCurrent, piCurrent, batteryLevel = esp.get_current_sensor_readings()
@@ -182,7 +182,8 @@ def main():
         print(f'ESP IMU Current:  {espIMUCurrent:.2f} A')
         print(f'Pi Current:       {piCurrent:.2f} A')
         print(f'Battery %:        {batteryLevel:.2f}%')
-        time.sleep(3)
+        print()
+        time.sleep(4)
         
         '''
         msg = input(">  ")
