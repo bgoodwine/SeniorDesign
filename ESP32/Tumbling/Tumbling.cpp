@@ -46,10 +46,11 @@ int lowPowerCheck(){
 
 int dayCycleCheck(){
   int val;
-  val = analogRead(PR_in);
-  Serial.print("PR voltage: ");
-  Serial.println(val);
+  //val = analogRead(PR_in);
+  //Serial.print("PR voltage: ");
+  //Serial.println(val);
 
+  return 1; // overwrite
   if (val > 750){
     return 1;
   }
@@ -276,8 +277,8 @@ int checkAnomalies(int currentState)
 
   //battv = analogRead(batt_in);
   //IMUv = analogRead(IMU_in);
-  Serial.println("PUT IMU CURRENT READING IN HERE");
-  Serial.println("PUT PI 5 CURRENT READING IN!");
+  //Serial.println("PUT IMU CURRENT READING IN HERE");
+  //Serial.println("PUT PI 5 CURRENT READING IN!");
   //Pi5v = digitalRead(Pi5_in);
   // TODO: replace with current reading here!!! 
   SDRv = analogRead(SDR_in);
@@ -297,15 +298,15 @@ int checkAnomalies(int currentState)
   /*if (battv < floor(200.0*3)) {
     return battAnomaly;
   }*/
-  if (((IMUv < floor(200.0*1.6))||(IMUv > floor(200.0*2.0)))&&(IMUon)) {
-    return IMUAnomaly;
-  }
+  //if (((IMUv < floor(200.0*1.6))||(IMUv > floor(200.0*2.0)))&&(IMUon)) {
+  //  return IMUAnomaly;
+  //}
 //  else if (((Pi5v < floor(4.75*200.0))||(Pi5v > floor(5.25*200.0)))&&(Pion)) {
-  else if ((Pi5v < 1)&&(Pion)) {
-    return Pi5Anomaly;
-  }
+  //else if ((Pi5v < 1)&&(Pion)) {
+   // return Pi5Anomaly;
+  //}
 //  else if (((SDRv < floor(4.75*200.0))||(SDRv > floor(5.25*200.0)))&&(SDRon)) {
-  else if ((SDRv < 1)&&(SDRon)) {
+  if ((SDRv < 1)&&(SDRon)) {
     return SDRAnomaly;
   }
   else {

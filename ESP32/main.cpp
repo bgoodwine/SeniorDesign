@@ -41,6 +41,25 @@ extern float batteryLevel;
 extern float oldBatteryLevel;
 extern float battThreshold;
 
+void turnOnPi() {
+  digitalWrite(Pi5_en, HIGH);
+  digitalWrite(PI_IMU_en, HIGH);
+  digitalWrite(LVL_SHFT_PI_EN, HIGH);
+  Serial.println("Pi, Pi IMU, and Pi level shifter enabled.");
+  delay(1000);
+  PiBus.begin((uint8_t)ESP_ADDR, (int)PI_SDA, (int)PI_SCL);
+  Serial.println("Joined Pi I2C bus.");
+}
+
+void turnOffPi() {
+  // turn off pi
+  // Pi low, IMU pi low, pi imu level shifter, SCL/SDA lines of pi bus 
+  digitalWrite(Pi5_en, LOW);
+  digitalWrite(PI_IMU_en, LOW);
+  digitalWrite(LVL_SHFT_PI_EN, LOW);
+  Serial.println("Pi, Pi IMU, and Pi level shifter disabled.");
+}
+
 void setup() {
   // Serial monitor initialization 
   Serial.begin(115200);
@@ -50,8 +69,7 @@ void setup() {
   // Join I2C bus controlled by Pi as slave with address 0x08 
   // NOTE: casting resolves overloading ambiguity!
   // TODO: join the bus AFTER the Pi turns on?? 
-  PiBus.begin((uint8_t)ESP_ADDR, (int)PI_SDA, (int)PI_SCL);
-  Serial.println("Joined Pi I2C bus.");
+  
   
   // Register PiComms.h functions to handle I2C data from Pi 
   PiBus.onReceive(receiveEvent);
@@ -67,12 +85,14 @@ void setup() {
   pinMode(DCDC_EN, OUTPUT);         // DC-DC converter 
 
   // write all enable outputs high
-  digitalWrite(PR_en, HIGH);
-  digitalWrite(Pi5_en, HIGH);
-  digitalWrite(SDR_en, HIGH);
-  digitalWrite(IMU_en, HIGH);
-  digitalWrite(PI_IMU_en, HIGH);
+  //digitalWrite(PR_en, HIGH);
+  //digitalWrite(Pi5_en, HIGH);
+  //digitalWrite(SDR_en, HIGH);
   Serial.println("All enable pins enabled.");
+
+  //digitalWrite(IMU_en, HIGH);
+  //digitalWrite(PI_IMU_en, HIGH);
+  Serial.println("IMUs enabled.");
 
   // enable i2c communication periferals 
   digitalWrite(LVL_SHFT_EN, HIGH);
@@ -81,6 +101,7 @@ void setup() {
   digitalWrite(DCDC_EN, HIGH);
   Serial.println("DC-DC converter enabled.");
 
+  delay(10);
 
   // Begin IMU I2C connection on ESP controlled bus
   ESPBus.begin((int)ESP_SDA, (int)ESP_SCL);  
@@ -92,34 +113,38 @@ void setup() {
 
 
   // Write low all devices except IMU to initialize
-  /*digitalWrite(PR_en, LOW);
+  digitalWrite(PR_en, LOW);
   Serial.println("Photoresistor: OFF");
-  digitalWrite(IMU_en, HIGH);
-  Serial.println("IMU: ON");
-  digitalWrite(Pi5_en, LOW);
-  Serial.println("Pi: OFF");
+  digitalWrite(IMU_en, LOW);
+  Serial.println("IMU: OFF");
+  //digitalWrite(Pi5_en, HIGH);
+  //Serial.println("Pi: OFF");
   digitalWrite(SDR_en, LOW);
-  Serial.println("SDR: OFF");*/
+  Serial.println("SDR: OFF");
 
+  // turn off pi
+  turnOnPi();
   delay(1000);
 
-  // Initialise IMU
-  Serial.println("Adafruit ICM20948 test!");
-  // Try to initialize!
-  if (!icm.begin_I2C((uint8_t)0x68, &ESPBus, (int32_t)0)) {
-    // if (!icm.begin_SPI(ICM_CS)) {
-    // if (!icm.begin_SPI(ICM_CS, ICM_SCK, ICM_MISO, ICM_MOSI)) {
-
-    Serial.println("Failed to find ICM20948 chip");
-  }
-
-    // Initialize MAX1704X (fuel gauge)
+  // Initialize MAX1704X (fuel gauge)
   if(!maxlipo.begin(&ESPBus)) {
     Serial.println("Oops, no MAX17048 detected...");
   } else {
     Serial.print(F("Found MAX17048"));
     Serial.print(F(" with Chip ID: 0x")); 
     Serial.println(maxlipo.getChipID(), HEX);
+  }
+
+  // Initialise IMU
+  Serial.println("Adafruit ICM20948 test!");
+  // Try to initialize!
+  if (!icm.begin_I2C((uint8_t)0x69, &ESPBus, (int32_t)0)) {
+    // if (!icm.begin_SPI(ICM_CS)) {
+    // if (!icm.begin_SPI(ICM_CS, ICM_SCK, ICM_MISO, ICM_MOSI)) {
+
+    Serial.println("Failed to find ICM20948 chip");
+  } else {
+    Serial.println("\nSUCCESS!\n");
   }
 
   Serial.print("Gyro range set to: ");
@@ -146,6 +171,8 @@ void setup() {
   Serial.print("Gyro data rate (Hz) is approximately: ");
   Serial.println(gyro_rate);
 
+  
+
   Serial.println("I2C connections ready.");
   Serial.println("Device Control System Initialized.");
   Serial.println("Anomaly/State Detection System Initialized.");
@@ -155,10 +182,9 @@ void setup() {
 
 void loop() {
   delay(3000);
+  static int i = 0;
   
   // TODO: Read in current sensor analog signal for BOTH
-  /*currentPi.d = readcurrent(10);
-  currentIMU.d = currentPi.d; 
   
   oldBatteryLevel = batteryLevel;
   
@@ -170,18 +196,34 @@ void loop() {
   // Serial.print(batteryLevel);
   
   current_anomaly_report = sendReport(anomaly, oldBatteryLevel, batteryLevel);
-  Serial.print("Message for I2C transfer to Pi: ");
-  Serial.println(current_anomaly_report);
-  current_anomaly_report = " " + current_anomaly_report;
+  /*if (anomaly == SDRAnomaly) {
+    current_anomaly_report = "SDR anomaly detected.";
+  } else {
+    current_anomaly_report = "SDR behaving.";
+  }*/
+  //Serial.print("Message for I2C transfer to Pi: ");
+  //Serial.println(current_anomaly_report);
+  //current_anomaly_report = " " + current_anomaly_report;
 
-  oldCurrentState = currentState;*/
-  current_anomaly_report = "anomolies... >:)";
-  Serial.println(current_anomaly_report);
+  oldCurrentState = currentState;
+
+  current_anomaly_report = measure_imu_currents(piIMUCurrent, espIMUCurrent, piCurrent);
   current_anomaly_report = " " + current_anomaly_report;
+  //current_anomaly_report = "anomolies... >:)";
+  //Serial.println(current_anomaly_report);
+  //current_anomaly_report = " " + current_anomaly_report;
 
   currentState = 0;
   current_tumbling_state = currentState;
   Serial.println(current_tumbling_state);
 
   currentState = 0;
+
+  /*i++;
+  if (i == 5) {
+    digitalWrite(IMU_en, LOW);
+    digitalWrite(PI_IMU_en, LOW);
+    Serial.println("IMUs NOT enabled.");
+  }*/
+  
 }

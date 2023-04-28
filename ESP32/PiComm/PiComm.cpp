@@ -105,6 +105,9 @@ void send_anomaly_report() {
     Serial.println("CHECKING CURRENT ANOMALY STATE");
     current_anomaly_report.toCharArray(reportarray, current_anomaly_report.length()+1);
     report = String(reportarray);
+    if (report.length() == 0) {
+      report = "Unknown";
+    }
   }
 
   Serial.print("Responding with message: ");
@@ -147,10 +150,10 @@ void send_current_sensor_readings() {
     batteryLevel.d = (double)maxlipo.cellPercent();*/
 
     // TODO: set equal to global values 
-    piIMUCurrentToSend.d = 1.11;
-    espIMUCurrentToSend.d = 2.22;
-    piCurrentToSend.d = 3.33;
-    batteryLevel.d = 4.44;
+    piIMUCurrentToSend.d = piIMUCurrent;
+    espIMUCurrentToSend.d = espIMUCurrent;
+    piCurrentToSend.d = piCurrent;
+    batteryLevel.d = (double)maxlipo.cellPercent();;
   }
 
   // 0-7 -> send Pi current
