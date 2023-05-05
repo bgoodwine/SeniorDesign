@@ -4,12 +4,14 @@
 #include "Arduino.h"
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
-#include <Adafruit_BNO055.h>
+#include <Adafruit_ICM20X.h>
+#include <Adafruit_ICM20948.h>
 #include "Adafruit_MAX1704X.h"
 #include <SPI.h> // needed for BNO055 library
 #include <stdint.h> // needed for int8_t datatype 
-#include <utility/imumaths.h>
+//#include <utility/imumaths.h>
 #include <Math.h>
+
 
 // state detection definitions 
 #define undeployed 0
@@ -22,31 +24,31 @@
 #define tumbling 1
 #define notTumbling 0
 
-#define PR_in 7
-#define IMU_in 15
-#define Pi5_in 16
-#define SDR_in 17
-#define dl_in 8
+#define PR_in  38 // TODO: we'll need to map to current instead
+#define SDR_in 26
 
-#define PR_en 9
-#define IMU_en 10
-#define Pi5_en 11
-#define SDR_en 12
+#define DCDC_EN         13
+#define LVL_SHFT_EN     4
+#define LVL_SHFT_PI_EN  21
 
-#define battAnomaly 1
-#define IMUAnomaly 2
-#define SDRAnomaly 3
-#define Pi5Anomaly 4
-#define noAnomaly 0
+#define PI_IMU_en  23
+#define PR_en      32
+#define IMU_en     27
+#define Pi5_en     18
+#define SDR_en     15
 
-//#define batt_in A0
-//#define currSense_in A1
+#define battAnomaly  1
+#define IMUAnomaly   2
+#define SDRAnomaly   3
+#define Pi5Anomaly   4
+#define noAnomaly    0
+
 
 extern TwoWire ESPBus;
-extern Adafruit_BNO055 bno;
+extern Adafruit_ICM20948 icm;
 extern Adafruit_MAX17048 maxlipo;
 
-// Tumbling external global state variables
+// tumbling external global state variables
 extern int currentState;
 extern int oldCurrentState;
 extern int anomaly;
