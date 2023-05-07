@@ -1,28 +1,20 @@
 #include "PiComms.h"
   
 int current_request = 0;
-u current_current = {0};
-String current_report = "";
+
+// global current values 
+double piIMUCurrent = 0;
+double piCurrent = 0;
+double espIMUCurrent = 0;
+
+// global tumbling/anomaly values
+String current_tumbling_report = "";
+String current_anomaly_report = "";
+int current_tumbling_state = 0;
+extern float batteryLevel;
+
 TwoWire PiBus = TwoWire(0);
 
-// return average of num_readings current measurements
-double readcurrent(int num_readings) {
-  double current_sum = 0;
-  for (int i = 0; i < num_readings; i++) {
-    // Read in current sensor analog signal
-    int data = analogRead(CURRENTPIN);
-
-    // data (0, 4095) -> voltage (0, 3.3)
-    double voltage = ((1.0*data)/4095.0)*3.3;
-
-    // voltage (0.62, 1.62) -> current (-20, 20)
-    current_sum = current_sum + (voltage - 1.62)*20;
-  }
-
-  // average
-  double current = current_sum/num_readings;
-  return current;
-}
 
 void send_sdr_msg() {
   static int index = 20;
@@ -40,72 +32,260 @@ void send_sdr_msg() {
   }
 }
 
-// Request for checkin function
-// Message format: "0:"
-void checkin() {
+void send_tumbling_report() {
+  static String report = "Error";
   static int index = 0;
-  Serial.println("Function: general checkin");
-  Serial.print("Message for Pi: ");
-  Serial.println(current_report);
 
-  Serial.print("Responding with message: ");
-  Serial.print(current_report);
+  // set current tumbling report on first runthrough 
+  if (index == 0) {
+    Serial.println("CHECKING TUMBLING CURRENT STATE");
+    if (current_tumbling_state == undeployed) {
+      report = "  Undeployed";
+    } else if (current_tumbling_state == tumblingState) {
+      report = "  Tumbling";
+    } else if (current_tumbling_state == dayCycle) {
+      report = "  Day cycle";
+    } else if (current_tumbling_state == nightCycle) {
+      report = "  Night cycle";
+    } else if (current_tumbling_state == lowPower) {
+      report = "  Low power";
+    } else if (current_tumbling_state == downlink) {
+      report = "  Downlink";
+    } else {
+      report = " Error";
+    }
+    //Serial.print("REPORT: ");
+    //Serial.println(report);
+  }
+
+  /*Serial.print("Responding with message: ");
+  Serial.print(report);
   Serial.print("Of length: ");
-  Serial.println(current_report.length());
-  Serial.print(" A at index = ");
+  Serial.print(report.length());
+  Serial.print(" at index = ");*/
+  /*Serial.print("report[");
   Serial.print(index);
+  Serial.print("] ");
   Serial.print(" = ");
-  Serial.print(current_report[index]);
+  Serial.print(report[index]);
   Serial.print(" = ");
-  Serial.println(current_report[index], HEX);
-  Serial.println("");
+  Serial.println(report[index], HEX);*/
 
   // Write current byte requested from global current measurement
-  PiBus.write(current_report[index]);
+  PiBus.write(report[index]);
   index++;
-  if (index > current_report.length()) {
+  if (index > report.length() + 1) {
     index = 0;
+    //Serial.println("RESETTING STATUS INDEX");
+    //Serial.print("index = ");
+    //Serial.print(index);
   }
 }
 
-void send_current() {
-  static int index = 0;
-  Serial.println("Function: Send Current.");
+void send_anomaly_report() {
+  static String report = "";
+  static char reportarray[BUFSIZ];
 
-  Serial.print("Responding with current: ");
-  Serial.print(current_current.d);
-  Serial.print(" A at index = ");
-  Serial.print(index);
+  static int index = 0;
+  if (index == 0) {
+    //Serial.println("CHECKING CURRENT ANOMALY STATE");
+    current_anomaly_report.toCharArray(reportarray, current_anomaly_report.length()+1);
+    report = String(reportarray);
+    //report = report + "!";
+    //Serial.print("REPORT: ");
+    //Serial.println(report);
+    if (report.length() == 0) {
+      report = "Unknown";
+    }
+  }
+
+  /*Serial.print("Responding with message: ");
+  Serial.print(report);
+  Serial.print("Of length: ");
+  Serial.print(report.length());
+  Serial.print(" at index = ");*/
+  /*Serial.print(index);
   Serial.print(" = ");
-  Serial.println(current_current.bytes[index], HEX);
-  Serial.println("");
+  Serial.print(report[index]);
+  Serial.print(" = ");
+  Serial.println(report[index], HEX);*/
 
   // Write current byte requested from global current measurement
-  PiBus.write(current_current.bytes[index]);
+  PiBus.write(report[index]);
   index++;
-  if (index > MAXINDEX) {
+  if (index > report.length()) {
     index = 0;
+    //Serial.println("RESETTING STATUS INDEX");
   }
+}
+
+void send_current_sensor_readings() {
+  static int index   = 0;
+  int maxindex = sizeof(double);
+  int num_values_to_send = 4;
+  int indexPiCurr = index; 
+  int indexIMUCurr = index - maxindex; 
+  int indexPi = index - maxindex*2;
+  int indexBatt = index - maxindex*3;
+  static u piIMUCurrentToSend;
+  static u espIMUCurrentToSend;
+  static u piCurrentToSend;
+  static u batteryLevel;
+
+  // grab new values on first loop
+  if (index == 0) {
+    /*reportCurrentPi.d = currentPi.d;
+    reportCurrentIMU.d = currentIMU.d;
+    batteryLevel.d = (double)maxlipo.cellPercent();*/
+
+    // TODO: set equal to global values 
+    piIMUCurrentToSend.d = piIMUCurrent;
+    espIMUCurrentToSend.d = espIMUCurrent;
+    piCurrentToSend.d = piCurrent;
+    batteryLevel.d = 0; 
+    // (double)maxlipo.cellPercent();
+    //piIMUCurrentToSend.d = 1.11;
+    //espIMUCurrentToSend.d = 2.22;
+    //piCurrentToSend.d = 3.33;
+  }
+
+  // 0-7 -> send Pi current
+  if (indexPiCurr < maxindex) {
+    /*Serial.print("Pi current: ");
+    Serial.print(piIMUCurrentToSend.d);
+    Serial.print(" at pi index = ");
+    Serial.print(indexPiCurr);
+    Serial.print(" & index = ");
+    Serial.println(index);
+    Serial.print(" = ");
+    Serial.println(piIMUCurrentToSend.bytes[indexPiCurr], HEX);
+    Serial.println("");*/
+    PiBus.write(piIMUCurrentToSend.bytes[indexPiCurr]);
+  // 8-15 = 0-7 -> send IMU current 
+  } else if (indexIMUCurr < maxindex) {
+    /*Serial.print("Responding with IMU current: ");
+    Serial.print(espIMUCurrentToSend.d);
+    Serial.print(" at IMU index = ");
+    Serial.print(indexIMUCurr);
+    Serial.print(" & index = ");
+    Serial.println(index);
+    Serial.print(" = ");
+    Serial.println(espIMUCurrentToSend.bytes[indexIMUCurr], HEX);
+    Serial.println("");*/
+    PiBus.write(espIMUCurrentToSend.bytes[indexIMUCurr]);
+  // 16-23 = 0-7 -> send battery %
+  } else if (indexPi < maxindex) {
+    /*Serial.print("Responding with Battery Percentage: ");
+    Serial.print(piCurrentToSend.d);
+    Serial.print(" at batt index = ");
+    Serial.print(indexPi);
+    Serial.print(" & index = ");
+    Serial.println(index);
+    Serial.print(" = ");
+    Serial.println(piCurrentToSend.bytes[indexPi], HEX);
+    Serial.println("");*/
+    // Write current byte requested from global current measurement
+    PiBus.write(piCurrentToSend.bytes[indexPi]);
+  } else if (indexBatt < maxindex) {
+    /*Serial.print("Responding with Battery Percentage: ");
+    Serial.print(batteryLevel.d);
+    Serial.print(" at batt index = ");
+    Serial.print(indexBatt);
+    Serial.print(" & index = ");
+    Serial.println(index);*/
+    /*Serial.print(" = ");
+    Serial.println(batteryLevel.bytes[indexBatt], HEX);
+    Serial.println("");*/
+    // Write current byte requested from global current measurement
+    PiBus.write(batteryLevel.bytes[indexBatt]);
+  }
+  
+  index++;
+
+  if (index >= maxindex*num_values_to_send) {
+    index = 0;
+    //Serial.println("INDEX RESET");
+  }
+
+  /*static int index   = 0;
+  int indexPi = index;
+  int indexIMU = index - MAXINDEX;
+  int indexBatt = index - MAXINDEX*2;
+  static u reportCurrentPi;
+  static u reportCurrentIMU;
+  static u batteryLevel;
+
+  if (indexPi == 0 && indexIMU == 0 && indexBatt == 0) {
+    reportCurrentPi.d = currentPi.d;
+    reportCurrentIMU.d = currentIMU.d;
+    batteryLevel.d = (double)maxlipo.cellPercent();
+  }
+  Serial.println("Function: Send Current.");
+
+  if (indexPi <= MAXINDEX) {
+    Serial.print("Responding with PI current: ");
+    Serial.print(currentPi.d);
+    Serial.print(" A at index = ");
+    Serial.print(indexPi);
+    Serial.print(" = ");
+    Serial.println(currentPi.bytes[indexPi], HEX);
+    Serial.println("");
+    // Write current byte requested from global current measurement
+    PiBus.write(currentPi.bytes[indexPi]);
+  } else if (indexIMU <= MAXINDEX*2) {
+    Serial.print("Responding with IMU current: ");
+    Serial.print(currentIMU.d);
+    Serial.print(" A at index = ");
+    Serial.print(indexIMU);
+    Serial.print(" = ");
+    Serial.println(currentIMU.bytes[indexIMU], HEX);
+    Serial.println("");
+    // Write current byte requested from global current measurement
+    PiBus.write(currentIMU.bytes[indexIMU]);
+  } else if (indexBatt <= MAXINDEX*3) {
+    Serial.print("Responding with Battery Percentage: ");
+    Serial.print(batteryLevel.d);
+    Serial.print(" A at index = ");
+    Serial.print(indexBatt);
+    Serial.print(" = ");
+    Serial.println(batteryLevel.bytes[indexBatt], HEX);
+    Serial.println("");
+    // Write current byte requested from global current measurement
+    PiBus.write(batteryLevel.bytes[indexBatt]);
+  }
+  
+  if (index >= MAXINDEX*3) {
+    //indexPi = 0;
+    index = 0;
+    Serial.println("Pi is DONE");
+  } else {
+    index++;
+  }*/
+
 }
 
 void requestEvent() {
   // Respond as the current request ID dictates 
   switch (current_request) {
     case 0: {
-      // 0 - request for general checkin
-      checkin();
+      // 0 - request for general send_tumbling_report
+      send_anomaly_report();
       break;
     }
     case 1: {
       // 1 - send current reading from ESP32 to Pi
-      send_current();
+      send_current_sensor_readings();
       break;
     }
     case 2: {
       // 2 - send message from ESP32 for SDR to Pi
       send_sdr_msg();
       break;
-
+    }
+    case 3: {
+      // 2 - send message from ESP32 for SDR to Pi
+      send_tumbling_report();
+      break;
     }
 
     default: {
@@ -125,11 +305,13 @@ void restart_device(int device_id) {
 
   switch(device_id) {
     case 0: {
-      digitalWrite(DEVICE_0, LOW);
+      //digitalWrite(DEVICE_0, LOW);
+      Serial.println("TURN ON DEVICE 0 REMOVED");
       break;
     }
     case 1: {
-      digitalWrite(DEVICE_1, LOW);
+      //digitalWrite(DEVICE_1, LOW);
+      Serial.println("TURN ON DEVICE 1 REMOVED");
       break;
     }
     case 2: {
@@ -165,11 +347,13 @@ void shutdown_device(int device_id) {
   
   switch(device_id) {
     case 0: {
-      digitalWrite(DEVICE_0, HIGH);
+      //digitalWrite(DEVICE_0, HIGH);
+      Serial.println("DEVICE 0 GONE");
       break;
     }
     case 1: {
-      digitalWrite(DEVICE_1, HIGH);
+      //digitalWrite(DEVICE_1, HIGH);
+      Serial.println("DEVICE 1 GONE");
       break;
     }
     case 2: {
@@ -252,7 +436,7 @@ void receiveEvent(int bytes_to_read) {
   switch(op) {
     case 0: 
     Serial.println("Calling 0...");
-    checkin();
+    //send_tumbling_report();
     break;
 
     case 1: {
@@ -279,6 +463,7 @@ void receiveEvent(int bytes_to_read) {
       current_request = atoi(data);
       Serial.print("Setting current request ID to ");
       Serial.println(current_request);
+      delay(100);
       break;
     }
 

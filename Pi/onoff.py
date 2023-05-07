@@ -88,7 +88,7 @@ class ESP32Client:
         # opcode 4 sets request id, request id 1 is send current
         self.send_msg('4:1')
 
-        # read in 8 bytes = sizeof(double) 
+        # read in 8 bytes = sizeof(double) for Pi current
         status = bytearray()
         for i in range(0, 8):
             status.append(self.bus.read_byte(self.addr))
@@ -96,11 +96,25 @@ class ESP32Client:
         time.sleep(0.1)
 
         current = struct.unpack('d', status)[0]
-        print(current)
+        print(f'Pi current:  {current}')
+        
+        # read in 8 bytes = sizeof(double) for IMU current
+        status = bytearray()
+        for i in range(0, 8):
+            status.append(self.bus.read_byte(self.addr))
+            time.sleep(0.05)
+        time.sleep(0.1)
+
+        current = struct.unpack('d', status)[0]
+        print(f'IMU current: {current}')
         return current
 
     def restart_sensor(self, sensor_id):
         print(f'Sending request to restart sensor {sensor_id}')
+        if sensor_id == 'pi':
+            sensor_id = 4
+        if sensor_id == 'sdr':
+            sensor_id = 5
         msg = '1:' + str(sensor_id) + '\0'
         self.send_msg(msg)
 
@@ -117,14 +131,10 @@ class ESP32Client:
     
 def main():
     esp = ESP32Client()
-    print("Enter command to send to ESP32:")
-    print("Options:")
-    print('\tcurrent   - get current reading from esp32')
-    print('\tsdr       - get fake message from esp32 for sdr')
-    print('\tstatus    - get status report from esp32')
+    print("Enter device to turn on/off ESP32:")
     print('\ton:id     - power on sensor with id = id')
-    print('\toff:id    - power off sensor with id = id')
-    print('\tany text  - send text as misc. message to esp32')
+    print('\tSDR: 5')
+    print('\tPi:  4')
 
     while True:
         msg = input(">  ")
