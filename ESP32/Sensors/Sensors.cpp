@@ -77,11 +77,11 @@ String measure_imu_currents(double &pi_imu_current, double &esp_imu_current, dou
   }
 
   // check Pi current range
-  if (pi_current > 0.6) {
+  /*if (pi_current > 0.6) {
     anomaly += "Pi (positive i spike), ";
   } else if (pi_current < -0.1) {
     anomaly += "Pi (negative i spike), ";
-  }
+  }*/
 
   // IMUs: 1.65 = 0A 
   // Pi:   0.33 = 0A
@@ -110,7 +110,14 @@ String measure_imu_currents(double &pi_imu_current, double &esp_imu_current, dou
   esp_imu_current = (esp_imu_voltage - 1.51)*(1 / 0.132);
 
   // (2.5*2)/3 = 1.67 = zero current voltage for pi 
-  pi_current = (pi_voltage - 1.09)*pi_sensitivity*(3.3/5.0); 
+  pi_current = (pi_voltage - 1.51)*pi_sensitivity*(3.3/5.0); 
+
+  // check Pi current range
+  if (pi_current > 1.0) {
+    anomaly += "Pi (positive i spike), ";
+  } else if (pi_current < -0.1) {
+    anomaly += "Pi (negative i spike), ";
+  }
 
   Serial.print("Pi's IMU's current:  ");
   Serial.print(pi_imu_current);
